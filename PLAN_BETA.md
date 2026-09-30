@@ -1,7 +1,7 @@
 # Plan de ejecución hacia Beta v0.1 — Gestión Universitaria CUCII
 
 > Documento de continuidad. Si la sesión se interrumpe, retomar desde aquí.
-> Estado: **Fase 0 completada** (rama `chore/fase-0-hardening`).
+> Estado: **Fase 0 completada**. En curso **1.1b** (frontend server-side search/filters). Batch CSV movido a Fase 3 (3.4/3.5).
 > Última actualización: 2026-09-30
 
 ---
@@ -103,8 +103,6 @@ Código en inglés, texto al usuario en español.
 ### Fase 1 — Funcionalidad mínima beta
 - [x] **1.1a** Backend búsqueda/filtros/orden server-side en todos los GET paginados (commit `f49d849`). Rutas y params documentados en el historial del commit.
 - [ ] **1.1b** Frontend: consumir `?search=`, filtros FK e `isActive` en Upload, Browse y pantallas de listado (hoy filtran client-side sobre la primera página).
-- [ ] **1.2** Batch de calificaciones: `POST /calificaciones/batch` transaccional con reporte de errores por fila + `addMany` en `GradesService` + importación CSV en `/upload` (previsualización, validación CURP/rango, guardado).
-- [ ] **1.3** (Opcional) Batch de alumnos: `POST /alumnos/batch` para carga inicial vía CSV.
 - [ ] **1.4** Validación en captura: el alumno debe pertenecer al grupo al registrar calificación.
 - [ ] **1.5** Catálogos completos donde la UI los use como select (evitar truncado por paginación).
 
@@ -122,6 +120,8 @@ Código en inglés, texto al usuario en español.
 - [ ] **3.1** Orden de captura: planteles → planes de estudio → materias → estatus → grupos → alumnos (manual/CSV) → asignaciones alumno-grupo → calificaciones (manual/CSV).
 - [ ] **3.2** Smoke test end-to-end: login → browse → captura manual → captura CSV → CRUDs admin.
 - [ ] **3.3** Tag `v0.1.0-beta` en git como punto estable.
+- [ ] **3.4** Batch de calificaciones (movido de 1.2): `POST /calificaciones/batch` transaccional con reporte de errores por fila + `addMany` en `GradesService` + importación CSV en `/upload` (previsualización, validación CURP/rango, guardado).
+- [ ] **3.5** (Opcional) Batch de alumnos (movido de 1.3): `POST /alumnos/batch` para carga inicial vía CSV.
 
 ### Fase 4 — Post-beta (mejora continua)
 - [ ] Matriz de roles real (docente solo sus grupos/materias; coordinador; servicios escolares; rector).
