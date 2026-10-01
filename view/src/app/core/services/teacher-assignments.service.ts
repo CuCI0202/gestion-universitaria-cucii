@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TeacherAssignment } from '../models/teacher-assignment.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 interface ProfesorGrupoResponse {
   id: number;
@@ -32,14 +33,17 @@ export class TeacherAssignmentsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<ProfesorGrupoResponse>>(`${environment.apiUrl}/profesores-grupos`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._assignments.set(res.content.map(toAssignment));

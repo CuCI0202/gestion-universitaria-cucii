@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -31,16 +31,7 @@ export class Upload {
   readonly showModal = signal(false);
   readonly searchResults = signal<Student[]>([]);
 
-  readonly studentGroups = computed<Group[]>(() => {
-    const student = this.foundStudent();
-    if (!student) return [];
-    const assignedIds = new Set(
-      this.groupStudentsService.assignments()
-        .filter((a) => a.studentId === student.id)
-        .map((a) => a.groupId),
-    );
-    return this.groupsService.groups().filter((g) => assignedIds.has(g.id));
-  });
+  readonly studentGroups = signal<Group[]>([]);
 
   readonly availableTerms = signal<number[]>([]);
   readonly studentSubjects = signal<Subject[]>([]);
@@ -52,14 +43,18 @@ export class Upload {
   searchStudent(): void {
     const query = this.searchQuery().trim();
     if (!query) return;
-    const queryUpper = query.toUpperCase();
-    const queryLower = query.toLowerCase();
-    const results = this.studentsService.students().filter(
-      (s) => s.curp === queryUpper || fullName(s).toLowerCase().includes(queryLower),
-    );
-    this.searchResults.set(results);
-    this.showModal.set(true);
-    this.searchError.set('');
+    this.studentsService.searchStudents(query, 10).subscribe({
+      next: (results) => {
+        this.searchResults.set(results);
+        this.showModal.set(true);
+        this.searchError.set(results.length ? '' : 'No se encontraron alumnos.');
+      },
+      error: () => {
+        this.searchResults.set([]);
+        this.showModal.set(true);
+        this.searchError.set('Error al buscar alumnos.');
+      },
+    });
   }
 
   selectStudent(student: Student): void {
@@ -70,6 +65,16 @@ export class Upload {
     this.form.patchValue({ groupId: '', term: 0, subjectId: '' });
     this.availableTerms.set([]);
     this.studentSubjects.set([]);
+    this.studentGroups.set([]);
+
+    this.groupStudentsService.getByStudent(student.id).subscribe({
+      next: (assignments) => {
+        if (assignments.length === 0) return;
+        this.groupsService.getByIds(assignments.map((a) => a.groupId)).subscribe({
+          next: (groups) => this.studentGroups.set(groups),
+        });
+      },
+    });
   }
 
   closeModal(): void {
@@ -143,6 +148,7 @@ export class Upload {
         this.searchError.set('');
         this.availableTerms.set([]);
         this.studentSubjects.set([]);
+        this.studentGroups.set([]);
         setTimeout(() => this.successMsg.set(''), 3000);
       },
       error: () => {

@@ -115,9 +115,9 @@
           <div class="flex items-center justify-between">
             <p class="text-sm text-gray-400">
               @if (hasFilters()) {
-                {{ filteredStudents().length }} alumno(s) encontrado(s)
+                {{ totalElements() }} alumno(s) encontrado(s)
               } @else {
-                Mostrando todos los alumnos &mdash; {{ filteredStudents().length }} en total
+                Mostrando todos los alumnos &mdash; {{ totalElements() }} en total
               }
             </p>
             <div class="flex gap-2">

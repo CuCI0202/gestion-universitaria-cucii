@@ -33,13 +33,7 @@ export class Groups {
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.groups();
-    return this.groups().filter(
-      (g) => g.clave.toUpperCase().includes(q) || g.nombre.toUpperCase().includes(q)
-    );
-  });
+  readonly filtered = computed(() => this.groups());
 
   readonly form = this.fb.nonNullable.group({
     clave: ['', Validators.required],
@@ -50,11 +44,14 @@ export class Groups {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.groupsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.groupsService.loadPage(0, this.pageSize(), {});
   }
 
   getProgramName(id: number): string {

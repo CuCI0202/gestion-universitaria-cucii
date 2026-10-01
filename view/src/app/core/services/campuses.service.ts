@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Campus } from '../models/campus.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 @Injectable({ providedIn: 'root' })
 export class CampusesService {
@@ -25,14 +26,17 @@ export class CampusesService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<Campus>>(`${environment.apiUrl}/planteles`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._campuses.set(res.content);

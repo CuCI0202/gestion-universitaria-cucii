@@ -30,16 +30,7 @@ export class Users {
   readonly showForm = signal(false);
   readonly showPassword = signal(false);
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.users();
-    return this.users().filter(
-      (u) =>
-        u.email.toUpperCase().includes(q) ||
-        u.nombre.toUpperCase().includes(q) ||
-        u.apellido.toUpperCase().includes(q)
-    );
-  });
+  readonly filtered = computed(() => this.users());
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -60,11 +51,14 @@ export class Users {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.usersService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.usersService.loadPage(0, this.pageSize(), {});
   }
 
   startEdit(user: User): void {

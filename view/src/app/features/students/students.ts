@@ -28,15 +28,7 @@ export class Students {
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.students();
-    return this.students().filter(
-      (s) =>
-        s.curp.includes(q) ||
-        fullName(s).toUpperCase().includes(q)
-    );
-  });
+  readonly filtered = computed(() => this.students());
 
   readonly form = this.fb.nonNullable.group({
     nombres: ['', Validators.required],
@@ -53,11 +45,14 @@ export class Students {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.studentsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.studentsService.loadPage(0, this.pageSize(), {});
   }
 
   startEdit(student: Student): void {

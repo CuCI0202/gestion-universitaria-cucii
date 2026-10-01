@@ -44,25 +44,20 @@ export class Browse {
   readonly currentPage = this.studentsService.currentPage;
   readonly pageSize = this.studentsService.pageSize;
 
-  readonly filteredStudents = computed<Student[]>(() => {
-    let list = this.studentsService.students();
-
-    const curp = this.filterCurp().trim().toUpperCase();
-    if (curp) list = list.filter((s) => s.curp.includes(curp));
-
-    const name = this.filterName().trim().toUpperCase();
-    if (name) list = list.filter((s) => fullName(s).toUpperCase().includes(name));
-
-    return list;
-  });
+  readonly filteredStudents = computed<Student[]>(() => this.studentsService.students());
 
   readonly hasFilters = computed(() =>
-    !!(this.filterCurpDraft() || this.filterNameDraft() || this.filterCurp() || this.filterName())
+    !!(this.filterCurp() || this.filterName())
   );
 
   search(): void {
-    this.filterCurp.set(this.filterCurpDraft());
-    this.filterName.set(this.filterNameDraft());
+    this.filterCurp.set(this.filterCurpDraft().trim().toUpperCase());
+    this.filterName.set(this.filterNameDraft().trim());
+    const filters: Record<string, string> = {};
+    if (this.filterCurp()) filters['curp'] = this.filterCurp();
+    if (this.filterName()) filters['search'] = this.filterName();
+    filters['isActive'] = 'true';
+    this.studentsService.loadPage(0, this.pageSize(), filters);
   }
 
   clearFilters(): void {
@@ -70,6 +65,7 @@ export class Browse {
     this.filterNameDraft.set('');
     this.filterCurp.set('');
     this.filterName.set('');
+    this.studentsService.loadPage(0, this.pageSize(), { isActive: 'true' });
   }
 
   fullName(student: Student): string {
@@ -129,19 +125,23 @@ export class Browse {
     this.studentProgramSubjects.set([]);
     this.studentGrades.set([]);
 
-    const assignedIds = this.groupStudentsService.assignments()
-      .filter((a) => a.studentId === student.id)
-      .map((a) => a.groupId);
-
-    const group = this.groupsService.groups().find((g) => assignedIds.includes(g.id));
-    if (!group) return;
-
     this.gradesService.getByStudent(student.id).subscribe({
       next: (grades) => this.studentGrades.set(grades),
     });
 
-    this.programsService.getSubjectsByProgram(group.planEstudioId).subscribe({
-      next: (subjects) => this.studentProgramSubjects.set(subjects),
+    this.groupStudentsService.getByStudent(student.id).subscribe({
+      next: (assignments) => {
+        if (assignments.length === 0) return;
+        this.groupsService.getByIds(assignments.map((a) => a.groupId)).subscribe({
+          next: (groups) => {
+            const group = groups[0];
+            if (!group) return;
+            this.programsService.getSubjectsByProgram(group.planEstudioId).subscribe({
+              next: (subjects) => this.studentProgramSubjects.set(subjects),
+            });
+          },
+        });
+      },
     });
   }
 

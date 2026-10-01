@@ -25,17 +25,7 @@ export class Campuses {
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.campuses();
-    return this.campuses().filter(
-      (c) =>
-        c.nombreOficial.toUpperCase().includes(q) ||
-        (c.nombreCorto?.toUpperCase().includes(q) ?? false) ||
-        c.ciudadMunicipio.toUpperCase().includes(q) ||
-        c.estado.toUpperCase().includes(q)
-    );
-  });
+  readonly filtered = computed(() => this.campuses());
 
   readonly form = this.fb.nonNullable.group({
     nombreOficial: ['', Validators.required],
@@ -53,11 +43,14 @@ export class Campuses {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.campusesService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.campusesService.loadPage(0, this.pageSize(), {});
   }
 
   startEdit(campus: Campus): void {

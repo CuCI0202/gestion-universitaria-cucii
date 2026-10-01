@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { User, UsuarioResponse, UsuarioRequest } from '../models/user.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
@@ -25,14 +26,17 @@ export class UsersService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<UsuarioResponse>>(`${environment.apiUrl}/usuarios`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._users.set(res.content);

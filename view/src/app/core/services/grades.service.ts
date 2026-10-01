@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Grade } from '../models/grade.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 interface CalificacionResponse {
   id: number;
@@ -42,14 +43,17 @@ export class GradesService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<CalificacionResponse>>(`${environment.apiUrl}/calificaciones`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._grades.set(res.content.map(toGrade));
@@ -68,9 +72,9 @@ export class GradesService {
   }
 
   getByStudent(alumnoId: number): Observable<Grade[]> {
-    return this.http.get<CalificacionResponse[]>(`${environment.apiUrl}/calificaciones?alumnoId=${alumnoId}`).pipe(
-      map((list) => list.map(toGrade)),
-    );
+    return this.http.get<PaginatedResponse<CalificacionResponse>>(`${environment.apiUrl}/calificaciones`, {
+      params: buildParams({ alumnoId, size: 100 }),
+    }).pipe(map((res) => res.content.map(toGrade)));
   }
 
   addGrade(grade: Omit<Grade, 'id'>): Observable<Grade> {

@@ -1,7 +1,7 @@
 # Plan de ejecución hacia Beta v0.1 — Gestión Universitaria CUCII
 
 > Documento de continuidad. Si la sesión se interrumpe, retomar desde aquí.
-> Estado: **Fase 0 completada**. En curso **1.1b** (frontend server-side search/filters). Batch CSV movido a Fase 3 (3.4/3.5).
+> Estado: **Fase 0 completada**. **1.1b + 1.1c completadas** (rama `feat/server-side-search-frontend`). Batch CSV movido a Fase 3 (3.4/3.5).
 > Última actualización: 2026-09-30
 
 ---
@@ -102,7 +102,9 @@ Código en inglés, texto al usuario en español.
 
 ### Fase 1 — Funcionalidad mínima beta
 - [x] **1.1a** Backend búsqueda/filtros/orden server-side en todos los GET paginados (commit `f49d849`). Rutas y params documentados en el historial del commit.
-- [ ] **1.1b** Frontend: consumir `?search=`, filtros FK e `isActive` en Upload, Browse y pantallas de listado (hoy filtran client-side sobre la primera página).
+- [x] **1.1b** Frontend server-side search/filtros: helper `core/services/http-params.ts` (`buildParams`/`QueryFilters`); `loadPage(page, size?, filters?)` en todos los servicios con filtros persistidos; Upload con `searchStudents()` + `getByStudent`/`getByIds`; Browse con `?curp=`/`?search=`/`isActive`; pantallas Students/Groups/Users/Campuses/Programs buscan en servidor; corregido `GradesService.getByStudent` a respuesta paginada.
+- [x] **1.1c** GroupStudents server-side: nuevos endpoints `GET /grupos/{id}/alumnos` y `GET /grupos/{id}/alumnos-disponibles` (ambos paginados con `?search=`); frontend usa `getStudentsByGroup`/`getAvailableStudents` y `removeByGroupAndStudent`. Validado contra la BD.
+  - Pendiente menor: `Profesores` sigue con búsqueda client-side por nombre de docente (el backend no expone ese filtro).
 - [ ] **1.4** Validación en captura: el alumno debe pertenecer al grupo al registrar calificación.
 - [ ] **1.5** Catálogos completos donde la UI los use como select (evitar truncado por paginación).
 
