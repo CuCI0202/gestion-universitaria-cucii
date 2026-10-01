@@ -26,9 +26,7 @@ public class AlumnoService {
     public PageResponse<AlumnoResponse> findAll(int page, int size, String search, String curp,
                                                 String correoInstitucional, Integer estatusId,
                                                 Boolean isActive, String sortBy, String sortDir) {
-        if (page < 0) throw new IllegalArgumentException("La página no puede ser negativa");
-        if (size < 1) throw new IllegalArgumentException("El tamaño de página debe ser al menos 1");
-        if (size > 100) throw new IllegalArgumentException("El tamaño de página no puede ser mayor a 100");
+        validatePaging(page, size);
 
         long totalElements = repository.countFiltered(search, curp, correoInstitucional, estatusId, isActive);
         int totalPages = (int) Math.ceil((double) totalElements / size);
@@ -39,6 +37,40 @@ public class AlumnoService {
                 .toList();
 
         return new PageResponse<>(content, totalElements, totalPages, page, size);
+    }
+
+    public PageResponse<AlumnoResponse> findByGrupo(int page, int size, Integer grupoId, String search) {
+        validatePaging(page, size);
+
+        long totalElements = repository.countByGrupo(grupoId, search, null);
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int offset = page * size;
+
+        List<AlumnoResponse> content = repository.findByGrupo(grupoId, size, offset, search, null).stream()
+                .map(this::toResponse)
+                .toList();
+
+        return new PageResponse<>(content, totalElements, totalPages, page, size);
+    }
+
+    public PageResponse<AlumnoResponse> findAvailableForGrupo(int page, int size, Integer grupoId, String search) {
+        validatePaging(page, size);
+
+        long totalElements = repository.countNotInGrupo(grupoId, search, true);
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int offset = page * size;
+
+        List<AlumnoResponse> content = repository.findNotInGrupo(grupoId, size, offset, search, true).stream()
+                .map(this::toResponse)
+                .toList();
+
+        return new PageResponse<>(content, totalElements, totalPages, page, size);
+    }
+
+    private void validatePaging(int page, int size) {
+        if (page < 0) throw new IllegalArgumentException("La página no puede ser negativa");
+        if (size < 1) throw new IllegalArgumentException("El tamaño de página debe ser al menos 1");
+        if (size > 100) throw new IllegalArgumentException("El tamaño de página no puede ser mayor a 100");
     }
 
     public AlumnoResponse findById(Integer id) {

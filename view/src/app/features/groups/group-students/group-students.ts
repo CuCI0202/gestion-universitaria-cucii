@@ -1,8 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { GroupsService } from '../../../core/services/groups.service';
-import { StudentsService } from '../../../core/services/students.service';
 import { GroupStudentsService } from '../../../core/services/group-students.service';
+import { Group } from '../../../core/models/group.model';
 import { Student, fullName } from '../../../core/models/student.model';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination';
 
@@ -15,46 +15,50 @@ export class GroupStudents {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly groupsService = inject(GroupsService);
-  private readonly studentsService = inject(StudentsService);
   private readonly groupStudentsService = inject(GroupStudentsService);
 
   readonly groupId = +this.route.snapshot.params['id'];
 
-  readonly group = computed(() =>
-    this.groupsService.groups().find((g) => g.id === this.groupId)
-  );
+  readonly group = signal<Group | null>(null);
 
   readonly filterDraft = signal('');
   readonly filterQ = signal('');
 
-  readonly totalElements = this.groupStudentsService.totalElements;
-  readonly totalPages = this.groupStudentsService.totalPages;
-  readonly currentPage = this.groupStudentsService.currentPage;
-  readonly pageSize = this.groupStudentsService.pageSize;
+  readonly assignedStudents = signal<Student[]>([]);
+  readonly availableStudents = signal<Student[]>([]);
 
-  readonly assignedStudents = computed((): Student[] => {
-    const assignedIds = new Set(
-      this.groupStudentsService
-        .assignments()
-        .filter((a) => a.groupId === this.groupId)
-        .map((a) => a.studentId)
-    );
-    return this.studentsService.students().filter((s) => assignedIds.has(s.id));
-  });
+  readonly totalElements = signal(0);
+  readonly totalPages = signal(0);
+  readonly currentPage = signal(0);
+  readonly pageSize = signal(20);
 
-  readonly availableStudents = computed((): Student[] => {
-    const assignedIds = new Set(this.assignedStudents().map((s) => s.id));
-    const q = this.filterQ().trim().toUpperCase();
-    return this.studentsService
-      .students()
-      .filter((s) => !assignedIds.has(s.id))
-      .filter(
-        (s) =>
-          !q ||
-          s.curp.includes(q) ||
-          fullName(s).toUpperCase().includes(q)
-      );
-  });
+  constructor() {
+    this.groupsService.getById(this.groupId).subscribe({
+      next: (group) => this.group.set(group),
+    });
+    this.loadAssigned();
+    this.loadAvailable(0, this.pageSize());
+  }
+
+  private loadAssigned(): void {
+    this.groupStudentsService.getStudentsByGroup(this.groupId).subscribe({
+      next: (students) => this.assignedStudents.set(students),
+    });
+  }
+
+  private loadAvailable(page: number, size: number): void {
+    this.groupStudentsService
+      .getAvailableStudents(this.groupId, page, size, this.filterQ())
+      .subscribe({
+        next: (res) => {
+          this.availableStudents.set(res.content);
+          this.totalElements.set(res.totalElements);
+          this.totalPages.set(res.totalPages);
+          this.currentPage.set(res.currentPage);
+          this.pageSize.set(res.pageSize);
+        },
+      });
+  }
 
   fullName(student: Student): string {
     return fullName(student);
@@ -62,19 +66,31 @@ export class GroupStudents {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    this.loadAvailable(0, this.pageSize());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.loadAvailable(0, this.pageSize());
   }
 
   assign(studentId: number): void {
-    this.groupStudentsService.assign(this.groupId, studentId).subscribe();
+    this.groupStudentsService.assign(this.groupId, studentId).subscribe({
+      next: () => {
+        this.loadAssigned();
+        this.loadAvailable(this.currentPage(), this.pageSize());
+      },
+    });
   }
 
   remove(studentId: number): void {
-    this.groupStudentsService.remove(this.groupId, studentId).subscribe();
+    this.groupStudentsService.removeByGroupAndStudent(this.groupId, studentId).subscribe({
+      next: () => {
+        this.loadAssigned();
+        this.loadAvailable(this.currentPage(), this.pageSize());
+      },
+    });
   }
 
   goBack(): void {
@@ -82,10 +98,10 @@ export class GroupStudents {
   }
 
   onPageChange(page: number): void {
-    this.groupStudentsService.loadPage(page);
+    this.loadAvailable(page, this.pageSize());
   }
 
   onSizeChange(size: number): void {
-    this.groupStudentsService.loadPage(0, size);
+    this.loadAvailable(0, size);
   }
 }

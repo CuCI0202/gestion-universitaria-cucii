@@ -124,6 +124,86 @@ public class AlumnoJdbcRepository {
         return count != null ? count : 0;
     }
 
+    public List<Alumno> findByGrupo(Integer grupoId, int limit, int offset, String search, Boolean isActive) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT a.* FROM alumnos a JOIN alumnos_grupos ag ON ag.alumno_id = a.id "
+                        + "WHERE ag.grupo_id = ? AND ag.is_active = true");
+        List<Object> params = new ArrayList<>();
+        params.add(grupoId);
+        appendSearch(sql, params, "a", search);
+        if (isActive != null) {
+            sql.append(" AND a.is_active = ?");
+            params.add(isActive);
+        }
+        sql.append(" ORDER BY a.primer_apellido ASC, a.segundo_apellido ASC, a.nombres ASC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+        return jdbcTemplate.query(sql.toString(), ALUMNO_MAPPER, params.toArray());
+    }
+
+    public long countByGrupo(Integer grupoId, String search, Boolean isActive) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM alumnos a JOIN alumnos_grupos ag ON ag.alumno_id = a.id "
+                        + "WHERE ag.grupo_id = ? AND ag.is_active = true");
+        List<Object> params = new ArrayList<>();
+        params.add(grupoId);
+        appendSearch(sql, params, "a", search);
+        if (isActive != null) {
+            sql.append(" AND a.is_active = ?");
+            params.add(isActive);
+        }
+        Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+        return count != null ? count : 0;
+    }
+
+    public List<Alumno> findNotInGrupo(Integer grupoId, int limit, int offset, String search, Boolean isActive) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT a.* FROM alumnos a WHERE NOT EXISTS ("
+                        + "SELECT 1 FROM alumnos_grupos ag WHERE ag.alumno_id = a.id AND ag.grupo_id = ? AND ag.is_active = true)");
+        List<Object> params = new ArrayList<>();
+        params.add(grupoId);
+        appendSearch(sql, params, "a", search);
+        if (isActive != null) {
+            sql.append(" AND a.is_active = ?");
+            params.add(isActive);
+        }
+        sql.append(" ORDER BY a.primer_apellido ASC, a.segundo_apellido ASC, a.nombres ASC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+        return jdbcTemplate.query(sql.toString(), ALUMNO_MAPPER, params.toArray());
+    }
+
+    public long countNotInGrupo(Integer grupoId, String search, Boolean isActive) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM alumnos a WHERE NOT EXISTS ("
+                        + "SELECT 1 FROM alumnos_grupos ag WHERE ag.alumno_id = a.id AND ag.grupo_id = ? AND ag.is_active = true)");
+        List<Object> params = new ArrayList<>();
+        params.add(grupoId);
+        appendSearch(sql, params, "a", search);
+        if (isActive != null) {
+            sql.append(" AND a.is_active = ?");
+            params.add(isActive);
+        }
+        Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+        return count != null ? count : 0;
+    }
+
+    private void appendSearch(StringBuilder sql, List<Object> params, String alias, String search) {
+        if (search == null || search.isBlank()) {
+            return;
+        }
+        String c = alias == null ? "" : alias + ".";
+        sql.append(" AND (").append(c).append("nombres ILIKE ? OR ")
+                .append(c).append("primer_apellido ILIKE ? OR ")
+                .append(c).append("segundo_apellido ILIKE ? OR ")
+                .append(c).append("curp ILIKE ? OR ")
+                .append(c).append("correo_institucional ILIKE ?)");
+        String pattern = "%" + search + "%";
+        for (int i = 0; i < 5; i++) {
+            params.add(pattern);
+        }
+    }
+
     public Optional<Alumno> findById(Integer id) {
         return jdbcTemplate.query(
                 "SELECT * FROM alumnos WHERE id = ?",

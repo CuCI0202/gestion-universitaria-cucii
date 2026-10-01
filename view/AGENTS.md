@@ -81,17 +81,19 @@ Todos usan `HttpClient` con endpoints reales. `signal<T[]>` interno, expuesto co
 
 Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 
+**Paginación y filtrado server-side:** cada servicio con listas expone `loadPage(page, size?, filters?)` donde `filters` es un `QueryFilters` (ver `core/services/http-params.ts`). El servicio guarda el último `filters` y lo reutiliza al paginar o al recargar tras un `add/update/delete`. El backend soporta `?search=`, filtros por FK, `isActive`, `sortBy`, `sortDir` en todos los GET paginados. Para búsquedas puntuales que no deben tocar el signal (ej. modal de alumnos en Upload) usar métodos dedicados como `searchStudents(query)`.
+
 | Servicio | Endpoints base | Notas |
 |---|---|---|
 | `AuthService` | `/auth/login`, `/auth/me` | Cookie + signal. `login()` → setea cookies + currentUser. Constructor restaura desde cookies + valida con `/auth/me`. `_cachedRole` fallback desde cookie `auth_role` para guards sincrónicos. |
-| `UsersService` | `/usuarios` | CRUD completo. `add`/`update` esperan `UsuarioRequest`. |
-| `StudentsService` | `/alumnos` | CRUD completo. `getByCurp()` filtra cliente-side. |
-| `GradesService` | `/calificaciones` | `getByStudent(alumnoId)` usa `?alumnoId=`. Sin `addMany` (pendiente batch). |
-| `ProgramsService` | `/planes-estudio/con-materias-count` (lista), `/planes-estudio/{id}/con-materias` (detalle) | `loadAll()` usa `con-materias-count` (sin N+1). Subjects se cargan separado vía `getSubjectsByProgram()`. |
-| `GroupsService` | `/grupos` | CRUD + `getCuatrimestresCount(id)` → `/grupos/{id}/cuatrimestres` + `getSubjectsByGroupAndTerm(groupId, cuatri)` → `/grupos/{groupId}/cuatrimestres/{cuatri}/materias` |
-| `CampusesService` | `/planteles` | CRUD, simple |
-| `GroupStudentsService` | `/alumnos-grupos` | Mapea `alumnoId`↔`studentId`, `grupoId`↔`groupId`. DELETE busca `id` en signal. |
-| `TeacherAssignmentsService` | `/profesores-grupos` | Mapea `usuarioId`↔`userId`, `grupoId`↔`groupId`, `materiaId`↔`subjectId`. |
+| `UsersService` | `/usuarios` | CRUD completo. `add`/`update` esperan `UsuarioRequest`. `loadPage` con `?search=`. |
+| `StudentsService` | `/alumnos` | CRUD completo. `searchStudents(query)` → `/alumnos?search=` (no muta el signal, ideal para modales). `loadPage` con `?search=`/`?curp=`. |
+| `GradesService` | `/calificaciones` | `getByStudent(alumnoId)` → `/calificaciones?alumnoId=&size=100` (respuesta paginada). Sin `addMany` (pendiente batch, Fase 3). |
+| `ProgramsService` | `/planes-estudio/con-materias-count` (lista), `/planes-estudio/{id}/con-materias` (detalle) | `loadPage` con `?search=`. Subjects se cargan separado vía `getSubjectsByProgram()`. |
+| `GroupsService` | `/grupos` | CRUD + `getCuatrimestresCount(id)` → `/grupos/{id}/cuatrimestres` + `getSubjectsByGroupAndTerm(groupId, cuatri)` → `/grupos/{groupId}/cuatrimestres/{cuatri}/materias` + `getByIds(ids)` (forkJoin) + `getByProgram(planEstudioId)` |
+| `CampusesService` | `/planteles` | CRUD, `loadPage` con `?search=` |
+| `GroupStudentsService` | `/alumnos-grupos`, `/grupos/{id}/alumnos` | Mapea `alumnoId`↔`studentId`, `grupoId`↔`groupId`. `getStudentsByGroup(grupoId)` (asignados), `getAvailableStudents(grupoId, page, size, search)` (disponibles), `getByStudent(alumnoId)`, `removeByGroupAndStudent(grupoId, studentId)`. |
+| `TeacherAssignmentsService` | `/profesores-grupos` | Mapea `usuarioId`↔`userId`, `grupoId`↔`groupId`, `materiaId`↔`subjectId`. `loadPage` con filtros FK. |
 
 ## Rutas (`src/app/app.routes.ts`)
 
@@ -116,7 +118,7 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 - Componentes: `inject()` en clase, signals para estado local, `computed()` para derivados
 - **No usar `ngOnInit`** — inicialización en constructor o inline
 - Forms: `FormBuilder.nonNullable.group({})` siempre
-- **Búsqueda en listas**: patrón draft+committed — `filterDraft` (input) + `filterQ` (aplicado en `computed()` vía `search()`)
+- **Búsqueda en listas**: patrón draft+committed — `filterDraft` (input) + `filterQ` (aplicado). `search()` dispara `service.loadPage(0, pageSize(), q ? { search: q } : {})`; el filtrado es **server-side**, `filtered` solo refleja `service.list()`. El servicio recuerda los filtros para paginar y recargar.
 - **Formularios unificados**: un solo `form` (NO `addForm` + `editForm` separados). Control de modo vía `editingId = signal<number | null>(null)`:
   - `null` = modo creación, `<id>` = modo actualización
   - `startEdit(item)`: setea `editingId`, carga valores en `form` con `setValue()`, muestra el formulario
@@ -130,8 +132,8 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 
 ## Flujo Upload (manual)
 
-1. Buscar alumno → `studentsService.students()` (filtro cliente-side por CURP o nombre)
-2. Seleccionar alumno → `groupStudentsService.assignments()` para obtener grupos
+1. Buscar alumno → `studentsService.searchStudents(query)` → `/alumnos?search=` server-side → modal de resultados
+2. Seleccionar alumno → `groupStudentsService.getByStudent(student.id)` → grupos vía `groupsService.getByIds(...)`
 3. Seleccionar grupo → `groupsService.getCuatrimestresCount(groupId)` → llena select de cuatrimestres
 4. Seleccionar cuatrimestre → `groupsService.getSubjectsByGroupAndTerm(groupId, term)` → llena materias
 5. Ingresar calificación → `gradesService.addGrade({ alumnoId, grupoId, materiaId, calificacion, registradoPor })`
@@ -139,9 +141,21 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 
 ## Flujo Browse
 
-- Lista: filtra `studentsService.students()` por CURP y nombre
-- Detalle: al seleccionar alumno, obtiene su grupo → `planEstudioId` → `programsService.getSubjectsByProgram()` → cruza con `gradesService.grades()` por `alumnoId`
+- Lista: `studentsService.loadPage(0, size, { curp, search, isActive })` — filtrado y paginado server-side
+- Detalle: al seleccionar alumno, `groupStudentsService.getByStudent()` → `groupsService.getByIds()` → `planEstudioId` → `programsService.getSubjectsByProgram()`; se cruza con `gradesService.getByStudent(alumnoId)` (respuesta paginada)
 - Agrupado por `cuatrimestre` de cada `Subject`. Sin `cuatrimestre` en `Grade` — se deriva de la materia.
+
+## Pendientes conocidos (frontend)
+
+- `Profesores`: su búsqueda filtra por nombre de docente, que el backend no expone; sigue siendo client-side sobre la página actual.
+- Los servicios son singletons: aplicar filtros en una pantalla deja el signal filtrado hasta que otra pantalla lo recargue.
+
+## Flujo GroupStudents (`/groups/:id/students`)
+
+- Asignados: `groupStudentsService.getStudentsByGroup(groupId)` → `/grupos/{id}/alumnos` (server-side, solo activos).
+- Disponibles: `getAvailableStudents(groupId, page, size, search)` → `/grupos/{id}/alumnos-disponibles` (paginado y con búsqueda server-side; excluye asignados activos).
+- `assign` → `POST /alumnos-grupos`; `remove` → `removeByGroupAndStudent` (busca la asignación por `alumnoId`+`grupoId` y borra por id).
+- Tras asignar/quitar se recargan ambas listas.
 
 ## Comandos
 

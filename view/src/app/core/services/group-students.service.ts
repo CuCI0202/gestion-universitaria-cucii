@@ -1,10 +1,12 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { tap, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { GroupStudent } from '../models/group-student.model';
+import { Student } from '../models/student.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 interface AlumnoGrupoResponse {
   id: number;
@@ -31,14 +33,17 @@ export class GroupStudentsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<AlumnoGrupoResponse>>(`${environment.apiUrl}/alumnos-grupos`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._assignments.set(res.content.map(toGroupStudent));
@@ -51,7 +56,33 @@ export class GroupStudentsService {
   }
 
   getByGroup(groupId: number): Observable<GroupStudent[]> {
-    return of(this._assignments().filter((a) => a.groupId === groupId));
+    return this.http.get<PaginatedResponse<AlumnoGrupoResponse>>(`${environment.apiUrl}/alumnos-grupos`, {
+      params: buildParams({ grupoId: groupId, size: 100 }),
+    }).pipe(map((res) => res.content.map(toGroupStudent)));
+  }
+
+  getByStudent(studentId: number): Observable<GroupStudent[]> {
+    return this.http.get<PaginatedResponse<AlumnoGrupoResponse>>(`${environment.apiUrl}/alumnos-grupos`, {
+      params: buildParams({ alumnoId: studentId, size: 100, isActive: true }),
+    }).pipe(map((res) => res.content.map(toGroupStudent)));
+  }
+
+  getStudentsByGroup(groupId: number, search = ''): Observable<Student[]> {
+    return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/grupos/${groupId}/alumnos`, {
+      params: buildParams({ size: 100, search }),
+    }).pipe(map((res) => res.content));
+  }
+
+  getAvailableStudents(
+    groupId: number,
+    page: number,
+    size: number,
+    search: string,
+  ): Observable<PaginatedResponse<Student>> {
+    return this.http.get<PaginatedResponse<Student>>(
+      `${environment.apiUrl}/grupos/${groupId}/alumnos-disponibles`,
+      { params: buildParams({ page, size, search }) },
+    );
   }
 
   assign(groupId: number, studentId: number): Observable<GroupStudent> {
@@ -72,6 +103,18 @@ export class GroupStudentsService {
 
     return this.http.delete<void>(`${environment.apiUrl}/alumnos-grupos/${record.id}`).pipe(
       tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
+  removeByGroupAndStudent(groupId: number, studentId: number): Observable<void> {
+    return this.http.get<PaginatedResponse<AlumnoGrupoResponse>>(`${environment.apiUrl}/alumnos-grupos`, {
+      params: buildParams({ alumnoId: studentId, grupoId: groupId, isActive: true, size: 1 }),
+    }).pipe(
+      switchMap((res) => {
+        const record = res.content[0];
+        if (!record) return of(void 0);
+        return this.http.delete<void>(`${environment.apiUrl}/alumnos-grupos/${record.id}`);
+      }),
     );
   }
 }

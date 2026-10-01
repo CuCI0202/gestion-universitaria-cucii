@@ -25,13 +25,7 @@ export class Programs {
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.programs();
-    return this.programs().filter(
-      (p) => p.nombre.toUpperCase().includes(q) || p.numeroRvoe.toUpperCase().includes(q)
-    );
-  });
+  readonly filtered = computed(() => this.programs());
 
   readonly degrees: Degree[] = ['Licenciatura', 'Maestría', 'Doctorado'];
 
@@ -45,11 +39,14 @@ export class Programs {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.programsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.programsService.loadPage(0, this.pageSize(), {});
   }
 
   startEdit(program: Program): void {

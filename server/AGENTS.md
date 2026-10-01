@@ -235,6 +235,8 @@ public class EntidadJdbcRepository {
 | GET | `/grupos/{id}` | Obtener por ID |
 | GET | `/grupos/{id}/cuatrimestres` | Cantidad de cuatrimestres de la carrera |
 | GET | `/grupos/{id}/cuatrimestres/{cuatrimestre}/materias` | Materias de un cuatrimestre |
+| GET | `/grupos/{id}/alumnos` | Alumnos asignados al grupo (paginado, `?search=`) |
+| GET | `/grupos/{id}/alumnos-disponibles` | Alumnos no asignados al grupo (paginado, `?search=`) |
 | POST | `/grupos` | Crear (201). Clave auto-generada si no se provee. |
 | PUT | `/grupos/{id}` | Actualizar |
 | DELETE | `/grupos/{id}` | Soft-delete (204) |

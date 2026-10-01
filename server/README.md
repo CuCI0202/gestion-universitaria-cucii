@@ -154,6 +154,8 @@ Content-Type: application/json
 ```http
 GET  /planes-estudio/{id}/con-materias           # Plan + materias activas (LEFT JOIN)
 GET  /planes-estudio/{id}/con-materias-sql       # Alias
+GET  /grupos/{id}/alumnos                        # Alumnos asignados (paginado, ?search=)
+GET  /grupos/{id}/alumnos-disponibles            # Alumnos no asignados (paginado, ?search=)
 DEL  /usuarios/{id}?deactivate=true              # Soft-delete
 DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 ```

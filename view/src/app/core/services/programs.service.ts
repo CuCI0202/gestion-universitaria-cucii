@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Program, Subject } from '../models/program.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 @Injectable({ providedIn: 'root' })
 export class ProgramsService {
@@ -25,14 +26,17 @@ export class ProgramsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<any>>(`${environment.apiUrl}/planes-estudio/con-materias-count`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._programs.set(res.content.map((p: any) => ({

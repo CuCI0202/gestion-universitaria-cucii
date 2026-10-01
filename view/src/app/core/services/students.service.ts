@@ -5,6 +5,7 @@ import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Student } from '../models/student.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 @Injectable({ providedIn: 'root' })
 export class StudentsService {
@@ -25,14 +26,17 @@ export class StudentsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._students.set(res.content);
@@ -48,6 +52,12 @@ export class StudentsService {
     return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`).pipe(
       map((res) => res.content),
     );
+  }
+
+  searchStudents(query: string, size = 10): Observable<Student[]> {
+    return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`, {
+      params: buildParams({ search: query.trim(), size }),
+    }).pipe(map((res) => res.content));
   }
 
   getById(id: number): Observable<Student> {

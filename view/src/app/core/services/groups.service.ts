@@ -1,11 +1,12 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Group } from '../models/group.model';
 import { Subject } from '../models/program.model';
 import { PaginatedResponse } from '../models/pagination.model';
+import { buildParams, QueryFilters } from './http-params';
 
 @Injectable({ providedIn: 'root' })
 export class GroupsService {
@@ -26,14 +27,17 @@ export class GroupsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
+  private _filters: QueryFilters = {};
+
   constructor() {
     this.loadPage(0);
   }
 
-  loadPage(page: number, size?: number): void {
+  loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
+    if (filters !== undefined) this._filters = filters;
     this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`, {
-      params: { page: String(page), size: String(s) },
+      params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
         this._groups.set(res.content);
@@ -56,9 +60,14 @@ export class GroupsService {
   }
 
   getByProgram(planEstudioId: number): Observable<Group[]> {
-    return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`).pipe(
-      map((res) => res.content),
-    );
+    return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`, {
+      params: buildParams({ planEstudioId, size: 100 }),
+    }).pipe(map((res) => res.content));
+  }
+
+  getByIds(ids: number[]): Observable<Group[]> {
+    if (ids.length === 0) return of([]);
+    return forkJoin(ids.map((id) => this.http.get<Group>(`${environment.apiUrl}/grupos/${id}`)));
   }
 
   getCuatrimestresCount(groupId: number): Observable<number> {
