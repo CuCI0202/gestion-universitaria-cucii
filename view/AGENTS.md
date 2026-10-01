@@ -89,9 +89,9 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 | `UsersService` | `/usuarios` | CRUD completo. `add`/`update` esperan `UsuarioRequest`. `loadPage` con `?search=`. |
 | `StudentsService` | `/alumnos` | CRUD completo. `searchStudents(query)` → `/alumnos?search=` (no muta el signal, ideal para modales). `loadPage` con `?search=`/`?curp=`. |
 | `GradesService` | `/calificaciones` | `getByStudent(alumnoId)` → `/calificaciones?alumnoId=&size=100` (respuesta paginada). Sin `addMany` (pendiente batch, Fase 3). |
-| `ProgramsService` | `/planes-estudio/con-materias-count` (lista), `/planes-estudio/{id}/con-materias` (detalle) | `loadPage` con `?search=`. Subjects se cargan separado vía `getSubjectsByProgram()`. |
+| `ProgramsService` | `/planes-estudio/con-materias-count` (lista), `/planes-estudio/{id}/con-materias` (detalle) | `loadPage` con `?search=`. Subjects se cargan separado vía `getSubjectsByProgram()`. `getCatalog(size=100)` para selects. |
 | `GroupsService` | `/grupos` | CRUD + `getCuatrimestresCount(id)` → `/grupos/{id}/cuatrimestres` + `getSubjectsByGroupAndTerm(groupId, cuatri)` → `/grupos/{groupId}/cuatrimestres/{cuatri}/materias` + `getByIds(ids)` (forkJoin) + `getByProgram(planEstudioId)` |
-| `CampusesService` | `/planteles` | CRUD, `loadPage` con `?search=` |
+| `CampusesService` | `/planteles` | CRUD, `loadPage` con `?search=`; `getCatalog(size=100)` para selects |
 | `GroupStudentsService` | `/alumnos-grupos`, `/grupos/{id}/alumnos` | Mapea `alumnoId`↔`studentId`, `grupoId`↔`groupId`. `getStudentsByGroup(grupoId)` (asignados), `getAvailableStudents(grupoId, page, size, search)` (disponibles), `getByStudent(alumnoId)`, `removeByGroupAndStudent(grupoId, studentId)`. |
 | `TeacherAssignmentsService` | `/profesores-grupos` | Mapea respuesta enriquecida (`usuarioNombre`, `grupoClave/Nombre`, `materiaClave/Nombre`). `loadPage` con `?search=` (profesor/grupo/materia) y filtros FK. `add` recibe `{ userId, groupId, subjectId }` y devuelve `void`. |
 
@@ -148,7 +148,7 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 ## Pendientes conocidos (frontend)
 
 - Los servicios son singletons: aplicar filtros en una pantalla deja el signal filtrado hasta que otra pantalla lo recargue.
-- Selects de catálogo en formularios (`Profesores`) usan `size=100`; si un catálogo supera 100 registros habrá que migrarlos a typeahead server-side.
+- Catálogos en selects (planes, planteles, grupos, docentes) se cargan completos con `size=100` (`getCatalog()` / `getAll()` / `getTeachers()`). Si un catálogo supera 100 registros habrá que migrarlo a typeahead server-side.
 
 ## Flujo Profesores (`/profesores`)
 

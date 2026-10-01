@@ -5,6 +5,7 @@ import mx.cucii.school.platform.dto.CalificacionRequest;
 import mx.cucii.school.platform.dto.CalificacionResponse;
 import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
+import mx.cucii.school.platform.model.AlumnoGrupo;
 import mx.cucii.school.platform.model.Calificacion;
 import mx.cucii.school.platform.repository.*;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class CalificacionService {
     private final GrupoJdbcRepository grupoRepository;
     private final MateriaJdbcRepository materiaRepository;
     private final UsuarioJdbcRepository usuarioRepository;
+    private final AlumnoGrupoJdbcRepository alumnoGrupoRepository;
 
     public PageResponse<CalificacionResponse> findAll(int page, int size, Integer alumnoId,
                                                       Integer grupoId, Integer materiaId,
@@ -66,6 +68,8 @@ public class CalificacionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + request.registradoPor()));
         }
 
+        validateEnrollment(request.alumnoId(), request.grupoId());
+
         repository.findByAlumnoIdAndGrupoIdAndMateriaId(
                 request.alumnoId(), request.grupoId(), request.materiaId()
         ).ifPresent(c -> {
@@ -103,6 +107,8 @@ public class CalificacionService {
             usuarioRepository.findById(request.registradoPor())
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + request.registradoPor()));
         }
+
+        validateEnrollment(request.alumnoId(), request.grupoId());
 
         Calificacion updated = new Calificacion(
                 existing.id(),
@@ -143,6 +149,13 @@ public class CalificacionService {
         if (calif.compareTo(BigDecimal.ZERO) < 0 || calif.compareTo(new BigDecimal("100")) > 0) {
             throw new IllegalArgumentException("La calificación debe estar entre 0 y 100");
         }
+    }
+
+    private void validateEnrollment(Integer alumnoId, Integer grupoId) {
+        alumnoGrupoRepository.findByAlumnoIdAndGrupoId(alumnoId, grupoId)
+                .filter(AlumnoGrupo::isActive)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El alumno no está asignado a este grupo"));
     }
 
     private CalificacionResponse toResponse(Calificacion c) {

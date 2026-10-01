@@ -4,6 +4,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { UsersService } from '../../core/services/users.service';
 import { CampusesService } from '../../core/services/campuses.service';
 import { User } from '../../core/models/user.model';
+import { Campus } from '../../core/models/campus.model';
 import { UserRole, mapRolId } from '../../core/models/auth.model';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
@@ -23,12 +24,16 @@ export class Users {
   readonly totalPages = this.usersService.totalPages;
   readonly currentPage = this.usersService.currentPage;
   readonly pageSize = this.usersService.pageSize;
-  readonly campuses = this.campusesService.campuses;
+  readonly campuses = signal<Campus[]>([]);
   readonly filterDraft = signal('');
   readonly filterQ = signal('');
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
   readonly showPassword = signal(false);
+
+  constructor() {
+    this.campusesService.getCatalog().subscribe({ next: (c) => this.campuses.set(c) });
+  }
 
   readonly filtered = computed(() => this.users());
 

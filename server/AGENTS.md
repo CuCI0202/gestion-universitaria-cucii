@@ -268,9 +268,11 @@ public class EntidadJdbcRepository {
 | GET | `/calificaciones` | Listar todas (paginado) |
 | GET | `/calificaciones?alumnoId=X` | Calificaciones de un alumno (sin paginación) |
 | GET | `/calificaciones/{id}` | Obtener por ID |
-| POST | `/calificaciones` | Registrar calificación (201). Rango 0-100. Unique: alumno+materia+grupo. |
+| POST | `/calificaciones` | Registrar calificación (201). Rango 0-100. El alumno debe estar asignado al grupo. Unique: alumno+materia+grupo. |
 | PUT | `/calificaciones/{id}` | Actualizar |
 | DELETE | `/calificaciones/{id}` | Soft-delete (204) |
+
+> **Validación alumno↔grupo:** `CalificacionService.validateEnrollment(alumnoId, grupoId)` exige una fila activa en `alumnos_grupos`. Reforzado en BD con la FK compuesta `fk_calificaciones_alumno_grupo (alumno_id, grupo_id) → alumnos_grupos (alumno_id, grupo_id)` (usa el unique `uq_alumno_grupo`).
 
 ### Auth (`/auth`)
 

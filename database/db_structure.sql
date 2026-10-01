@@ -298,6 +298,11 @@ create table calificaciones
             references alumnos (id)
             on update cascade on delete cascade,
 
+    constraint fk_calificaciones_alumno_grupo
+        foreign key (alumno_id, grupo_id)
+            references alumnos_grupos (alumno_id, grupo_id)
+            on update cascade on delete cascade,
+
     constraint fk_calificaciones_grupo
         foreign key (grupo_id)
             references grupos (id)
