@@ -7,11 +7,22 @@ import { TeacherAssignment } from '../models/teacher-assignment.model';
 import { PaginatedResponse } from '../models/pagination.model';
 import { buildParams, QueryFilters } from './http-params';
 
-interface ProfesorGrupoResponse {
+export interface TeacherAssignmentRequest {
+  userId: number;
+  groupId: number;
+  subjectId: number;
+}
+
+interface ProfesorGrupoDetalleResponse {
   id: number;
   usuarioId: number;
+  usuarioNombre: string;
   grupoId: number;
+  grupoClave: string;
+  grupoNombre: string;
   materiaId: number;
+  materiaClave: string;
+  materiaNombre: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -42,7 +53,7 @@ export class TeacherAssignmentsService {
   loadPage(page: number, size?: number, filters?: QueryFilters): void {
     const s = size ?? this._pageSize();
     if (filters !== undefined) this._filters = filters;
-    this.http.get<PaginatedResponse<ProfesorGrupoResponse>>(`${environment.apiUrl}/profesores-grupos`, {
+    this.http.get<PaginatedResponse<ProfesorGrupoDetalleResponse>>(`${environment.apiUrl}/profesores-grupos`, {
       params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
@@ -55,14 +66,14 @@ export class TeacherAssignmentsService {
     });
   }
 
-  add(assignment: Omit<TeacherAssignment, 'id'>): Observable<TeacherAssignment | null> {
-    return this.http.post<ProfesorGrupoResponse>(`${environment.apiUrl}/profesores-grupos`, {
+  add(assignment: TeacherAssignmentRequest): Observable<void> {
+    return this.http.post<unknown>(`${environment.apiUrl}/profesores-grupos`, {
       usuarioId: assignment.userId,
       grupoId: assignment.groupId,
       materiaId: assignment.subjectId,
     }).pipe(
-      map(toAssignment),
       tap(() => this.loadPage(this._currentPage())),
+      map(() => void 0),
     );
   }
 
@@ -73,11 +84,16 @@ export class TeacherAssignmentsService {
   }
 }
 
-function toAssignment(res: ProfesorGrupoResponse): TeacherAssignment {
+function toAssignment(res: ProfesorGrupoDetalleResponse): TeacherAssignment {
   return {
     id: res.id,
     userId: res.usuarioId,
+    userName: res.usuarioNombre,
     groupId: res.grupoId,
+    groupClave: res.grupoClave,
+    groupName: res.grupoNombre,
     subjectId: res.materiaId,
+    subjectClave: res.materiaClave,
+    subjectName: res.materiaNombre,
   };
 }

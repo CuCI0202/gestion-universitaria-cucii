@@ -139,6 +139,8 @@ Content-Type: application/json
 | Alumno ↔ Grupo | `/alumnos-grupos` | Asignar | Actualizar | Soft-delete |
 | Profesor ↔ Grupo ↔ Materia | `/profesores-grupos` | Asignar | Actualizar | Soft-delete |
 
+> `GET /profesores-grupos` devuelve las asignaciones con los nombres de profesor, grupo y materia, y acepta `?search=` sobre esos campos.
+
 ### Calificaciones
 
 | Método | Ruta | Descripción |

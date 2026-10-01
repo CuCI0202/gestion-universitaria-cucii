@@ -93,7 +93,7 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 | `GroupsService` | `/grupos` | CRUD + `getCuatrimestresCount(id)` → `/grupos/{id}/cuatrimestres` + `getSubjectsByGroupAndTerm(groupId, cuatri)` → `/grupos/{groupId}/cuatrimestres/{cuatri}/materias` + `getByIds(ids)` (forkJoin) + `getByProgram(planEstudioId)` |
 | `CampusesService` | `/planteles` | CRUD, `loadPage` con `?search=` |
 | `GroupStudentsService` | `/alumnos-grupos`, `/grupos/{id}/alumnos` | Mapea `alumnoId`↔`studentId`, `grupoId`↔`groupId`. `getStudentsByGroup(grupoId)` (asignados), `getAvailableStudents(grupoId, page, size, search)` (disponibles), `getByStudent(alumnoId)`, `removeByGroupAndStudent(grupoId, studentId)`. |
-| `TeacherAssignmentsService` | `/profesores-grupos` | Mapea `usuarioId`↔`userId`, `grupoId`↔`groupId`, `materiaId`↔`subjectId`. `loadPage` con filtros FK. |
+| `TeacherAssignmentsService` | `/profesores-grupos` | Mapea respuesta enriquecida (`usuarioNombre`, `grupoClave/Nombre`, `materiaClave/Nombre`). `loadPage` con `?search=` (profesor/grupo/materia) y filtros FK. `add` recibe `{ userId, groupId, subjectId }` y devuelve `void`. |
 
 ## Rutas (`src/app/app.routes.ts`)
 
@@ -147,8 +147,14 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 
 ## Pendientes conocidos (frontend)
 
-- `Profesores`: su búsqueda filtra por nombre de docente, que el backend no expone; sigue siendo client-side sobre la página actual.
 - Los servicios son singletons: aplicar filtros en una pantalla deja el signal filtrado hasta que otra pantalla lo recargue.
+- Selects de catálogo en formularios (`Profesores`) usan `size=100`; si un catálogo supera 100 registros habrá que migrarlos a typeahead server-side.
+
+## Flujo Profesores (`/profesores`)
+
+- Lista: `TeacherAssignmentsService.loadPage(0, size, { search })` → `/profesores-grupos` ya devuelve los nombres resueltos (profesor, grupo, materia); no hay que cruzar catálogos en cliente.
+- Alta: selects de profesor (`UsersService.getTeachers()` → `/usuarios?rolId=3&size=100`), grupo (`GroupsService.getAll()` → `/grupos?size=100`) y materia (según el plan del grupo vía `ProgramsService.getSubjectsByProgram()`).
+- `add` no devuelve la entidad; errores de duplicado se muestran por el callback `error` (HTTP 400).
 
 ## Flujo GroupStudents (`/groups/:id/students`)
 

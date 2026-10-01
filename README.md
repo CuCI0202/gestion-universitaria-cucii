@@ -221,6 +221,7 @@ Content-Type: application/json
 | GET | `/planes-estudio/{id}/con-materias-sql` | Alias del anterior | ADMIN |
 | GET | `/grupos/{id}/alumnos` | Alumnos asignados al grupo (paginado, `?search=`) | ADMIN |
 | GET | `/grupos/{id}/alumnos-disponibles` | Alumnos no asignados al grupo (paginado, `?search=`) | ADMIN |
+| GET | `/profesores-grupos` | Asignaciones con nombres de profesor/grupo/materia (paginado, `?search=`) | ADMIN |
 | DELETE | `/usuarios/{id}?deactivate=true` | Soft-delete | ADMIN |
 | DELETE | `/usuarios/{id}?deactivate=false` | Hard-delete | ADMIN |
 
