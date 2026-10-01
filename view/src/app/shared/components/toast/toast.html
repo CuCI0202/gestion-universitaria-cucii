@@ -1,0 +1,11 @@
+<div class="fixed top-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 pr-4 pointer-events-none">
+  @for (n of notifications(); track n.id) {
+    <div [class]="containerClass(n.type)">
+      <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" [class]="dotClass(n.type)"></span>
+      <p class="flex-1 leading-snug" [class]="textClass(n.type)">{{ n.message }}</p>
+      <button type="button" (click)="dismiss(n.id)"
+        class="shrink-0 text-lg leading-none opacity-60 hover:opacity-100"
+        aria-label="Cerrar">&times;</button>
+    </div>
+  }
+</div>

@@ -1,11 +1,12 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TeacherAssignment } from '../models/teacher-assignment.model';
 import { PaginatedResponse } from '../models/pagination.model';
 import { buildParams, QueryFilters } from './http-params';
+import { SKIP_ERROR_NOTIFICATION } from '../interceptors/error.interceptor';
 
 export interface TeacherAssignmentRequest {
   userId: number;
@@ -71,6 +72,8 @@ export class TeacherAssignmentsService {
       usuarioId: assignment.userId,
       grupoId: assignment.groupId,
       materiaId: assignment.subjectId,
+    }, {
+      context: new HttpContext().set(SKIP_ERROR_NOTIFICATION, true),
     }).pipe(
       tap(() => this.loadPage(this._currentPage())),
       map(() => void 0),

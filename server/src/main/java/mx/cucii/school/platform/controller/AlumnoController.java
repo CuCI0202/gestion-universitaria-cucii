@@ -51,4 +51,9 @@ public class AlumnoController {
         alumnoService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<AlumnoResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(alumnoService.restore(id));
+    }
 }

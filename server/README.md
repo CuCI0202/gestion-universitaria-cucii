@@ -158,6 +158,7 @@ GET  /planes-estudio/{id}/con-materias           # Plan + materias activas (LEFT
 GET  /planes-estudio/{id}/con-materias-sql       # Alias
 GET  /grupos/{id}/alumnos                        # Alumnos asignados (paginado, ?search=)
 GET  /grupos/{id}/alumnos-disponibles            # Alumnos no asignados (paginado, ?search=)
+POST /alumnos/{id}/restore                       # Reactivar alumno archivado
 DEL  /usuarios/{id}?deactivate=true              # Soft-delete
 DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 ```

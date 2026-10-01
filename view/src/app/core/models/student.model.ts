@@ -6,6 +6,7 @@ export interface Student {
   curp: string;
   correoInstitucional: string;
   estatusId: number;
+  isActive: boolean;
 }
 
 export const STATUS_MAP: Record<number, { label: string; classes: string }> = {

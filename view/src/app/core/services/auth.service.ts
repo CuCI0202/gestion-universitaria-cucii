@@ -1,8 +1,9 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { SKIP_ERROR_NOTIFICATION } from '../interceptors/error.interceptor';
 import {
   LoginRequest,
   LoginResponse,
@@ -55,7 +56,9 @@ export class AuthService {
   login(email: string, password: string): Observable<LoginResponse> {
     const body: LoginRequest = { email, password };
 
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body, {
+      context: new HttpContext().set(SKIP_ERROR_NOTIFICATION, true),
+    }).pipe(
       tap((res) => {
         const rol = mapRolId(res.rolId);
         this._token.set(res.token);

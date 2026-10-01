@@ -1,11 +1,12 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Grade } from '../models/grade.model';
 import { PaginatedResponse } from '../models/pagination.model';
 import { buildParams, QueryFilters } from './http-params';
+import { SKIP_ERROR_NOTIFICATION } from '../interceptors/error.interceptor';
 
 interface CalificacionResponse {
   id: number;
@@ -78,7 +79,9 @@ export class GradesService {
   }
 
   addGrade(grade: Omit<Grade, 'id'>): Observable<Grade> {
-    return this.http.post<CalificacionResponse>(`${environment.apiUrl}/calificaciones`, grade).pipe(
+    return this.http.post<CalificacionResponse>(`${environment.apiUrl}/calificaciones`, grade, {
+      context: new HttpContext().set(SKIP_ERROR_NOTIFICATION, true),
+    }).pipe(
       tap(() => this.loadPage(this._currentPage())),
       map(toGrade),
     );
