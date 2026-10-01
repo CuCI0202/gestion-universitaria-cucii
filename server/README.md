@@ -184,6 +184,7 @@ DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 | `alumnos.curp` | Formato oficial CURP (regex en service + constraint en PostgreSQL) |
 | `grupos.clave` | Auto-generada como `CG-{n}` vía secuencia si no se provee |
 | `calificaciones.calificacion` | Rango 0-100 (BigDecimal) |
+| `calificaciones.alumno + grupo` | El alumno debe estar asignado (activo) al grupo; validado en service + FK compuesta en PostgreSQL |
 | `planteles.pais` | Default `'México'` si no se especifica |
 | Unique `alumno + grupo` | No duplicar asignación en `alumnos_grupos` |
 | Unique `profesor + grupo + materia` | No duplicar asignación en `profesores_grupos` |

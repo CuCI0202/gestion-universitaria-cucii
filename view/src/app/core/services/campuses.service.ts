@@ -54,6 +54,12 @@ export class CampusesService {
     );
   }
 
+  getCatalog(size = 100): Observable<Campus[]> {
+    return this.http.get<PaginatedResponse<Campus>>(`${environment.apiUrl}/planteles`, {
+      params: buildParams({ size }),
+    }).pipe(map((res) => res.content));
+  }
+
   getById(id: number): Observable<Campus> {
     return this.http.get<Campus>(`${environment.apiUrl}/planteles/${id}`);
   }

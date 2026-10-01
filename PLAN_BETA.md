@@ -1,7 +1,7 @@
 # Plan de ejecución hacia Beta v0.1 — Gestión Universitaria CUCII
 
 > Documento de continuidad. Si la sesión se interrumpe, retomar desde aquí.
-> Estado: **Fase 0 completada**. **1.1b/1.1c/1.1d completadas** (rama `feat/profesores-server-side`). Batch CSV movido a Fase 3 (3.4/3.5).
+> Estado: **Fase 0 + 1.1 + 1.4 + 1.5 completadas** (rama `feat/1.4-1.5-validation-catalogs`). Batch CSV movido a Fase 3 (3.4/3.5).
 > Última actualización: 2026-09-30
 
 ---
@@ -105,8 +105,8 @@ Código en inglés, texto al usuario en español.
 - [x] **1.1b** Frontend server-side search/filtros: helper `core/services/http-params.ts` (`buildParams`/`QueryFilters`); `loadPage(page, size?, filters?)` en todos los servicios con filtros persistidos; Upload con `searchStudents()` + `getByStudent`/`getByIds`; Browse con `?curp=`/`?search=`/`isActive`; pantallas Students/Groups/Users/Campuses/Programs buscan en servidor; corregido `GradesService.getByStudent` a respuesta paginada.
 - [x] **1.1c** GroupStudents server-side: nuevos endpoints `GET /grupos/{id}/alumnos` y `GET /grupos/{id}/alumnos-disponibles` (ambos paginados con `?search=`); frontend usa `getStudentsByGroup`/`getAvailableStudents` y `removeByGroupAndStudent`. Validado contra la BD.
 - [x] **1.1d** Profesores server-side: `GET /profesores-grupos` ahora devuelve `ProfesorGrupoDetalleResponse` con nombres de profesor/grupo/materia y acepta `?search=` (ILIKE sobre los tres). Frontend sin cruces client-side; selects con `size=100`. Validado contra la BD.
-- [ ] **1.4** Validación en captura: el alumno debe pertenecer al grupo al registrar calificación.
-- [ ] **1.5** Catálogos completos donde la UI los use como select (evitar truncado por paginación).
+- [x] **1.4** Validación alumno↔grupo al registrar/actualizar calificación: `CalificacionService.validateEnrollment` (fila activa en `alumnos_grupos`) + FK compuesta `fk_calificaciones_alumno_grupo` en `database/db_structure.sql`. Validado (400 con mensaje claro; constraint en BD).
+- [x] **1.5** Catálogos completos en selects (opción 1): `ProgramsService.getCatalog()` y `CampusesService.getCatalog()` (`size=100`); Groups/Users/Subjects cargan catálogos en señales locales. Profesores ya usaba `size=100`. Pendiente post-beta: migrar a typeahead si un catálogo supera 100.
 
 ### Fase 2 — Despliegue beta en VPS
 - [ ] **2.1** `server/Dockerfile` (multi-stage: Maven → `eclipse-temurin:21-jre`).

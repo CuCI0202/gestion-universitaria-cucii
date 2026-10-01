@@ -6,6 +6,8 @@ import { GroupsService } from '../../core/services/groups.service';
 import { ProgramsService } from '../../core/services/programs.service';
 import { CampusesService } from '../../core/services/campuses.service';
 import { Group } from '../../core/models/group.model';
+import { Program } from '../../core/models/program.model';
+import { Campus } from '../../core/models/campus.model';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -26,12 +28,17 @@ export class Groups {
   readonly totalPages = this.groupsService.totalPages;
   readonly currentPage = this.groupsService.currentPage;
   readonly pageSize = this.groupsService.pageSize;
-  readonly programs = this.programsService.programs;
-  readonly campuses = this.campusesService.campuses;
+  readonly programs = signal<Program[]>([]);
+  readonly campuses = signal<Campus[]>([]);
   readonly filterDraft = signal('');
   readonly filterQ = signal('');
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
+
+  constructor() {
+    this.programsService.getCatalog().subscribe({ next: (p) => this.programs.set(p) });
+    this.campusesService.getCatalog().subscribe({ next: (c) => this.campuses.set(c) });
+  }
 
   readonly filtered = computed(() => this.groups());
 

@@ -39,22 +39,19 @@ export class ProgramsService {
       params: buildParams({ page, size: s, ...this._filters }),
     }).subscribe({
       next: (res) => {
-        this._programs.set(res.content.map((p: any) => ({
-          id: p.id,
-          nombre: p.nombre,
-          grado: p.grado,
-          numeroRvoe: p.numeroRvoe,
-          fechaRvoe: p.fechaRvoe,
-          duracionCuatrimestres: p.duracionCuatrimestres,
-          cantidadMaterias: p.cantidadMaterias ?? 0,
-          materias: [],
-        })));
+        this._programs.set(res.content.map(toProgram));
         this._totalElements.set(res.totalElements);
         this._totalPages.set(res.totalPages);
         this._currentPage.set(res.currentPage);
         this._pageSize.set(s);
       },
     });
+  }
+
+  getCatalog(size = 100): Observable<Program[]> {
+    return this.http.get<PaginatedResponse<any>>(`${environment.apiUrl}/planes-estudio/con-materias-count`, {
+      params: buildParams({ size }),
+    }).pipe(map((res) => res.content.map(toProgram)));
   }
 
   getAll(): Observable<Program[]> {
@@ -155,4 +152,17 @@ export class ProgramsService {
       ),
     );
   }
+}
+
+function toProgram(p: any): Program {
+  return {
+    id: p.id,
+    nombre: p.nombre,
+    grado: p.grado,
+    numeroRvoe: p.numeroRvoe,
+    fechaRvoe: p.fechaRvoe,
+    duracionCuatrimestres: p.duracionCuatrimestres,
+    cantidadMaterias: p.cantidadMaterias ?? 0,
+    materias: [],
+  };
 }

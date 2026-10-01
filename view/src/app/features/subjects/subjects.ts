@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ProgramsService } from '../../core/services/programs.service';
-import { Subject } from '../../core/models/program.model';
+import { Program, Subject } from '../../core/models/program.model';
 
 @Component({
   selector: 'app-subjects',
@@ -14,11 +14,15 @@ export class Subjects {
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
 
-  readonly programs = this.programsService.programs;
+  readonly programs = signal<Program[]>([]);
   readonly selectedProgramId = signal<number>(0);
   readonly editingId = signal<number | null>(null);
   private readonly _subjects = signal<Subject[]>([]);
   readonly subjects = this._subjects.asReadonly();
+
+  constructor() {
+    this.programsService.getCatalog().subscribe({ next: (p) => this.programs.set(p) });
+  }
 
   readonly availableTerms = computed(() => {
     const id = this.selectedProgramId();
