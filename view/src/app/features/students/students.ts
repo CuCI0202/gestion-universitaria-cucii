@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { StudentsService } from '../../core/services/students.service';
+import { QueryFilters } from '../../core/services/http-params';
 import { Student, fullName, STATUS_MAP } from '../../core/models/student.model';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
@@ -16,6 +18,7 @@ export class Students {
   private readonly studentsService = inject(StudentsService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly students = this.studentsService.students;
   readonly totalElements = this.studentsService.totalElements;
@@ -25,10 +28,19 @@ export class Students {
   readonly STATUS_MAP = STATUS_MAP;
   readonly filterDraft = signal('');
   readonly filterQ = signal('');
+  readonly showArchived = signal(false);
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
 
   readonly filtered = computed(() => this.students());
+
+  private buildFilters(): QueryFilters {
+    const q = this.filterQ().trim();
+    return {
+      ...(q ? { search: q } : {}),
+      ...(this.showArchived() ? {} : { isActive: true }),
+    };
+  }
 
   readonly form = this.fb.nonNullable.group({
     nombres: ['', Validators.required],
@@ -45,14 +57,18 @@ export class Students {
 
   search(): void {
     this.filterQ.set(this.filterDraft());
-    const q = this.filterQ().trim();
-    this.studentsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
+    this.studentsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
-    this.studentsService.loadPage(0, this.pageSize(), {});
+    this.studentsService.loadPage(0, this.pageSize(), this.buildFilters());
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.studentsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   startEdit(student: Student): void {
@@ -104,16 +120,35 @@ export class Students {
     };
     const id = this.editingId();
     if (id !== null) {
-      this.studentsService.update(id, payload).subscribe();
+      this.studentsService.update(id, payload).subscribe({
+        next: () => {
+          this.notifications.success('Alumno actualizado.');
+          this.closeForm();
+        },
+      });
     } else {
-      this.studentsService.add(payload).subscribe();
+      this.studentsService.add(payload).subscribe({
+        next: () => {
+          this.notifications.success('Alumno registrado.');
+          this.closeForm();
+        },
+      });
     }
-    this.closeForm();
   }
 
   delete(id: number): void {
-    this.confirm.confirm('¿Eliminar este alumno?').subscribe((ok) => {
-      if (ok) this.studentsService.delete(id).subscribe();
+    this.confirm.confirm('¿Archivar este alumno?').subscribe((ok) => {
+      if (ok) {
+        this.studentsService.delete(id).subscribe({
+          next: () => this.notifications.success('Alumno archivado.'),
+        });
+      }
+    });
+  }
+
+  restore(id: number): void {
+    this.studentsService.restore(id).subscribe({
+      next: () => this.notifications.success('Alumno restaurado.'),
     });
   }
 

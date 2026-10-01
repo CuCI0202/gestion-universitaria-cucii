@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -6,6 +7,7 @@ import { GradesService } from '../../core/services/grades.service';
 import { StudentsService } from '../../core/services/students.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { GroupStudentsService } from '../../core/services/group-students.service';
+import { extractErrorMessage } from '../../core/interceptors/error.interceptor';
 import { Student, fullName } from '../../core/models/student.model';
 import { Subject } from '../../core/models/program.model';
 import { Group } from '../../core/models/group.model';
@@ -151,8 +153,8 @@ export class Upload {
         this.studentGroups.set([]);
         setTimeout(() => this.successMsg.set(''), 3000);
       },
-      error: () => {
-        this.errorMsg.set('Error al registrar la calificación.');
+      error: (err: HttpErrorResponse) => {
+        this.errorMsg.set(extractErrorMessage(err));
       },
     });
   }

@@ -223,9 +223,10 @@ public class EntidadJdbcRepository {
 |--------|------|--------|
 | GET | `/alumnos` | Listar todos (paginado) |
 | GET | `/alumnos/{id}` | Obtener por ID |
-| POST | `/alumnos` | Crear (201). Valida CURP, correo únicos y estatus FK existente. |
+| POST | `/alumnos` | Crear (201). Valida CURP, correo únicos y estatus FK existente. Si el CURP/correo pertenece a un alumno **archivado**, el mensaje sugiere restaurarlo. |
 | PUT | `/alumnos/{id}` | Actualizar |
 | DELETE | `/alumnos/{id}` | Soft-delete (204) |
+| POST | `/alumnos/{id}/restore` | Reactivar alumno archivado (200) |
 
 ### Grupos (`/grupos`)
 

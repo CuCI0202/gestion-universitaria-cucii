@@ -84,11 +84,15 @@ public class AlumnoService {
         validateRequest(request);
 
         repository.findByCurp(request.curp()).ifPresent(a -> {
-            throw new IllegalArgumentException("El CURP ya está registrado");
+            throw new IllegalArgumentException(a.isActive()
+                    ? "El CURP ya está registrado"
+                    : "Existe un alumno archivado con ese CURP. Restáuralo o usa otro.");
         });
         if (request.correoInstitucional() != null && !request.correoInstitucional().isBlank()) {
             repository.findByCorreoInstitucional(request.correoInstitucional()).ifPresent(a -> {
-                throw new IllegalArgumentException("El correo institucional ya está registrado");
+                throw new IllegalArgumentException(a.isActive()
+                        ? "El correo institucional ya está registrado"
+                        : "Existe un alumno archivado con ese correo. Restáuralo o usa otro.");
             });
         }
 
@@ -116,14 +120,18 @@ public class AlumnoService {
 
         if (!existing.curp().equals(request.curp())) {
             repository.findByCurp(request.curp()).ifPresent(a -> {
-                throw new IllegalArgumentException("El CURP ya está registrado");
+                throw new IllegalArgumentException(a.isActive()
+                        ? "El CURP ya está registrado"
+                        : "Existe un alumno archivado con ese CURP. Restáuralo o usa otro.");
             });
         }
         String newCorreo = request.correoInstitucional();
         if (newCorreo != null && !newCorreo.isBlank()
                 && !newCorreo.equals(existing.correoInstitucional())) {
             repository.findByCorreoInstitucional(newCorreo).ifPresent(a -> {
-                throw new IllegalArgumentException("El correo institucional ya está registrado");
+                throw new IllegalArgumentException(a.isActive()
+                        ? "El correo institucional ya está registrado"
+                        : "Existe un alumno archivado con ese correo. Restáuralo o usa otro.");
             });
         }
 
@@ -148,6 +156,17 @@ public class AlumnoService {
             throw new ResourceNotFoundException("Alumno no encontrado: " + id);
         }
         repository.softDeleteById(id, OffsetDateTime.now());
+    }
+
+    @Transactional
+    public AlumnoResponse restore(Integer id) {
+        Alumno existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Alumno no encontrado: " + id));
+        if (!existing.isActive()) {
+            repository.restoreById(id, OffsetDateTime.now());
+        }
+        return toResponse(repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Alumno no encontrado: " + id)));
     }
 
     private void validateRequest(AlumnoRequest request) {

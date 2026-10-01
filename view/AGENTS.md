@@ -50,7 +50,7 @@ User          { id, nombre, apellido, email, rolId, plantelId, isActive }
 UsuarioRequest { nombre, apellido, email, password, rolId, plantelId }
 
 // student.model.ts
-Student       { id, nombres, primerApellido, segundoApellido?, curp, correoInstitucional, estatusId }
+Student       { id, nombres, primerApellido, segundoApellido?, curp, correoInstitucional, estatusId, isActive }
 STATUS_MAP    Record<number, { label, classes }> — 1=Invasión (amarillo), 2=Cursando (verde), 3=Egresado (verde brillante), 4=Baja (rojo)
 
 // program.model.ts
@@ -87,7 +87,7 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 |---|---|---|
 | `AuthService` | `/auth/login`, `/auth/me` | Cookie + signal. `login()` → setea cookies + currentUser. Constructor restaura desde cookies + valida con `/auth/me`. `_cachedRole` fallback desde cookie `auth_role` para guards sincrónicos. |
 | `UsersService` | `/usuarios` | CRUD completo. `add`/`update` esperan `UsuarioRequest`. `loadPage` con `?search=`. |
-| `StudentsService` | `/alumnos` | CRUD completo. `searchStudents(query)` → `/alumnos?search=` (no muta el signal, ideal para modales). `loadPage` con `?search=`/`?curp=`. |
+| `StudentsService` | `/alumnos` | CRUD + `restore(id)` → `POST /alumnos/{id}/restore`. `loadPage` **excluye archivados por defecto** (`isActive: true`). `searchStudents(query)` → `/alumnos?search=&isActive=true` (no muta el signal, ideal para modales). `getAll()` solo activos. |
 | `GradesService` | `/calificaciones` | `getByStudent(alumnoId)` → `/calificaciones?alumnoId=&size=100` (respuesta paginada). Sin `addMany` (pendiente batch, Fase 3). |
 | `ProgramsService` | `/planes-estudio/con-materias-count` (lista), `/planes-estudio/{id}/con-materias` (detalle) | `loadPage` con `?search=`. Subjects se cargan separado vía `getSubjectsByProgram()`. `getCatalog(size=100)` para selects. |
 | `GroupsService` | `/grupos` | CRUD + `getCuatrimestresCount(id)` → `/grupos/{id}/cuatrimestres` + `getSubjectsByGroupAndTerm(groupId, cuatri)` → `/grupos/{groupId}/cuatrimestres/{cuatri}/materias` + `getByIds(ids)` (forkJoin) + `getByProgram(planEstudioId)` |
@@ -119,6 +119,7 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 - **No usar `ngOnInit`** — inicialización en constructor o inline
 - Forms: `FormBuilder.nonNullable.group({})` siempre
 - **Búsqueda en listas**: patrón draft+committed — `filterDraft` (input) + `filterQ` (aplicado). `search()` dispara `service.loadPage(0, pageSize(), q ? { search: q } : {})`; el filtrado es **server-side**, `filtered` solo refleja `service.list()`. El servicio recuerda los filtros para paginar y recargar.
+- **Soft-delete en listas**: los listados excluyen archivados por defecto (`isActive: true`). La pantalla `Students` tiene toggle "Mostrar archivados" (carga sin filtro `isActive`) y muestra el badge **"Archivado — Eliminado"** en filas con `isActive: false`, con botón **"Restaurar"** (`POST /alumnos/{id}/restore`).
 - **Formularios unificados**: un solo `form` (NO `addForm` + `editForm` separados). Control de modo vía `editingId = signal<number | null>(null)`:
   - `null` = modo creación, `<id>` = modo actualización
   - `startEdit(item)`: setea `editingId`, carga valores en `form` con `setValue()`, muestra el formulario
@@ -162,6 +163,14 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 - Disponibles: `getAvailableStudents(groupId, page, size, search)` → `/grupos/{id}/alumnos-disponibles` (paginado y con búsqueda server-side; excluye asignados activos).
 - `assign` → `POST /alumnos-grupos`; `remove` → `removeByGroupAndStudent` (busca la asignación por `alumnoId`+`grupoId` y borra por id).
 - Tras asignar/quitar se recargan ambas listas.
+
+## Manejo de errores (frontend)
+
+- `NotificationService` (`core/services/notification.service.ts`) mantiene una lista de notificaciones (`success | error | info`) con auto-dismiss; `ToastComponent` (`shared/components/toast/`) las renderiza y está montado global en `App` (`<app-toast />`).
+- `errorInterceptor` (`core/interceptors/error.interceptor.ts`) muestra un toast con el mensaje del backend (`{ "error": "..." }`) en **cualquier** HTTP error, salvo `401` (lo maneja `authInterceptor` con logout + redirect). Registrado en `app.config.ts` junto a `authInterceptor`.
+- `extractErrorMessage(err)` resuelve el texto a mostrar (body.error → texto plano → mapa por status → genérico).
+- **Opt-out:** `SKIP_ERROR_NOTIFICATION` (`HttpContextToken<boolean>`) evita el toast cuando la pantalla ya maneja el error inline. Ya aplicado en `AuthService.login`, `TeacherAssignmentsService.add` y `GradesService.addGrade`.
+- Convención: las pantallas nuevas reciben el toast de error automáticamente; usar el skip token solo si hay UI de error propia.
 
 ## Comandos
 

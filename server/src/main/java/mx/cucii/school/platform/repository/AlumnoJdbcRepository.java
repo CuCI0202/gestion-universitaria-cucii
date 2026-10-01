@@ -268,4 +268,11 @@ public class AlumnoJdbcRepository {
                 now, id
         );
     }
+
+    public void restoreById(Integer id, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE alumnos SET is_active = true, updated_at = ? WHERE id = ?",
+                now, id
+        );
+    }
 }

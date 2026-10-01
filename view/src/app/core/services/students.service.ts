@@ -26,7 +26,7 @@ export class StudentsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
-  private _filters: QueryFilters = {};
+  private _filters: QueryFilters = { isActive: true };
 
   constructor() {
     this.loadPage(0);
@@ -49,14 +49,16 @@ export class StudentsService {
   }
 
   getAll(): Observable<Student[]> {
-    return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`).pipe(
+    return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`, {
+      params: buildParams({ isActive: true }),
+    }).pipe(
       map((res) => res.content),
     );
   }
 
   searchStudents(query: string, size = 10): Observable<Student[]> {
     return this.http.get<PaginatedResponse<Student>>(`${environment.apiUrl}/alumnos`, {
-      params: buildParams({ search: query.trim(), size }),
+      params: buildParams({ search: query.trim(), size, isActive: true }),
     }).pipe(map((res) => res.content));
   }
 
@@ -69,7 +71,7 @@ export class StudentsService {
     return of(this._students().find((s) => s.curp === normalized));
   }
 
-  add(student: Omit<Student, 'id'>): Observable<Student> {
+  add(student: Omit<Student, 'id' | 'isActive'>): Observable<Student> {
     return this.http.post<Student>(`${environment.apiUrl}/alumnos`, {
       ...student,
       curp: student.curp.toUpperCase(),
@@ -88,6 +90,12 @@ export class StudentsService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/alumnos/${id}`).pipe(
+      tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
+  restore(id: number): Observable<Student> {
+    return this.http.post<Student>(`${environment.apiUrl}/alumnos/${id}/restore`, {}).pipe(
       tap(() => this.loadPage(this._currentPage())),
     );
   }
