@@ -49,10 +49,10 @@ export class GroupsService {
     });
   }
 
-  getAll(): Observable<Group[]> {
-    return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`).pipe(
-      map((res) => res.content),
-    );
+  getAll(size = 100): Observable<Group[]> {
+    return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`, {
+      params: buildParams({ size }),
+    }).pipe(map((res) => res.content));
   }
 
   getById(id: number): Observable<Group> {

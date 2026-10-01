@@ -255,7 +255,7 @@ public class EntidadJdbcRepository {
 
 | Método | Ruta | Acción |
 |--------|------|--------|
-| GET | `/profesores-grupos` | Listar asignaciones (paginado) |
+| GET | `/profesores-grupos` | Listar asignaciones con nombres (profesor/grupo/materia) — paginado, `?search=` (ILIKE sobre profesor, grupo y materia) |
 | GET | `/profesores-grupos/{id}` | Obtener por ID |
 | POST | `/profesores-grupos` | Asignar profesor a grupo+materia (201). Unique: profesor+grupo+materia. |
 | PUT | `/profesores-grupos/{id}` | Actualizar |

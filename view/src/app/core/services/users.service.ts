@@ -83,4 +83,10 @@ export class UsersService {
   getById(id: number): Observable<User> {
     return this.http.get<User>(`${environment.apiUrl}/usuarios/${id}`);
   }
+
+  getTeachers(): Observable<User[]> {
+    return this.http.get<PaginatedResponse<UsuarioResponse>>(`${environment.apiUrl}/usuarios`, {
+      params: buildParams({ rolId: 3, size: 100 }),
+    }).pipe(map((res) => res.content));
+  }
 }

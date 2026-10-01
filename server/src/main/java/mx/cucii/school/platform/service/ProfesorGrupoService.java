@@ -2,10 +2,12 @@ package mx.cucii.school.platform.service;
 
 import lombok.RequiredArgsConstructor;
 import mx.cucii.school.platform.dto.ProfesorGrupoRequest;
+import mx.cucii.school.platform.dto.ProfesorGrupoDetalleResponse;
 import mx.cucii.school.platform.dto.ProfesorGrupoResponse;
 import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.ProfesorGrupo;
+import mx.cucii.school.platform.model.ProfesorGrupoDetalle;
 import mx.cucii.school.platform.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,19 +24,20 @@ public class ProfesorGrupoService {
     private final GrupoJdbcRepository grupoRepository;
     private final MateriaJdbcRepository materiaRepository;
 
-    public PageResponse<ProfesorGrupoResponse> findAll(int page, int size, Integer usuarioId,
-                                                       Integer grupoId, Integer materiaId,
-                                                       Boolean isActive, String sortBy, String sortDir) {
+    public PageResponse<ProfesorGrupoDetalleResponse> findAll(int page, int size, Integer usuarioId,
+                                                              Integer grupoId, Integer materiaId,
+                                                              Boolean isActive, String search,
+                                                              String sortBy, String sortDir) {
         if (page < 0) throw new IllegalArgumentException("La página no puede ser negativa");
         if (size < 1) throw new IllegalArgumentException("El tamaño de página debe ser al menos 1");
         if (size > 100) throw new IllegalArgumentException("El tamaño de página no puede ser mayor a 100");
 
-        long totalElements = repository.countFiltered(usuarioId, grupoId, materiaId, isActive);
+        long totalElements = repository.countDetalle(usuarioId, grupoId, materiaId, isActive, search);
         int totalPages = (int) Math.ceil((double) totalElements / size);
         int offset = page * size;
 
-        List<ProfesorGrupoResponse> content = repository.findAll(size, offset, usuarioId, grupoId, materiaId, isActive, sortBy, sortDir).stream()
-                .map(this::toResponse)
+        List<ProfesorGrupoDetalleResponse> content = repository.findDetalle(size, offset, usuarioId, grupoId, materiaId, isActive, search, sortBy, sortDir).stream()
+                .map(this::toDetalleResponse)
                 .toList();
 
         return new PageResponse<>(content, totalElements, totalPages, page, size);
@@ -122,6 +125,17 @@ public class ProfesorGrupoService {
         return new ProfesorGrupoResponse(
                 a.id(), a.usuarioId(), a.grupoId(), a.materiaId(),
                 a.isActive(), a.createdAt()
+        );
+    }
+
+    private ProfesorGrupoDetalleResponse toDetalleResponse(ProfesorGrupoDetalle d) {
+        String nombre = ((d.usuarioNombre() == null ? "" : d.usuarioNombre()) + " "
+                + (d.usuarioApellido() == null ? "" : d.usuarioApellido())).trim();
+        return new ProfesorGrupoDetalleResponse(
+                d.id(), d.usuarioId(), nombre,
+                d.grupoId(), d.grupoClave(), d.grupoNombre(),
+                d.materiaId(), d.materiaClave(), d.materiaNombre(),
+                d.isActive(), d.createdAt()
         );
     }
 }

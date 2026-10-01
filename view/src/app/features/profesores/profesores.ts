@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { GroupsService } from '../../core/services/groups.service';
@@ -6,6 +6,8 @@ import { ProgramsService } from '../../core/services/programs.service';
 import { UsersService } from '../../core/services/users.service';
 import { TeacherAssignmentsService } from '../../core/services/teacher-assignments.service';
 import { Subject } from '../../core/models/program.model';
+import { Group } from '../../core/models/group.model';
+import { User } from '../../core/models/user.model';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -21,14 +23,14 @@ export class Profesores {
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
 
-  readonly assignments = this.assignmentsService.assignments;
+  readonly filtered = this.assignmentsService.assignments;
   readonly totalElements = this.assignmentsService.totalElements;
   readonly totalPages = this.assignmentsService.totalPages;
   readonly currentPage = this.assignmentsService.currentPage;
   readonly pageSize = this.assignmentsService.pageSize;
-  readonly teachers = computed(() => this.usersService.users().filter((u) => u.rolId === 3));
-  readonly groups = this.groupsService.groups;
-  readonly programs = this.programsService.programs;
+
+  readonly teachers = signal<User[]>([]);
+  readonly groups = signal<Group[]>([]);
 
   readonly showAddForm = signal(false);
   readonly selectedGroupId = signal<number | null>(null);
@@ -39,27 +41,27 @@ export class Profesores {
   private readonly _subjects = signal<Subject[]>([]);
   readonly availableSubjects = this._subjects.asReadonly();
 
-  readonly filtered = computed(() => {
-    const q = this.filterQ().trim().toUpperCase();
-    if (!q) return this.assignments();
-    return this.assignments().filter((a) =>
-      this.getTeacherName(a.userId).toUpperCase().includes(q)
-    );
-  });
-
   readonly addForm = this.fb.nonNullable.group({
     userId: ['', Validators.required],
     groupId: ['', Validators.required],
     subjectId: ['', Validators.required],
   });
 
+  constructor() {
+    this.usersService.getTeachers().subscribe({ next: (teachers) => this.teachers.set(teachers) });
+    this.groupsService.getAll().subscribe({ next: (groups) => this.groups.set(groups) });
+  }
+
   search(): void {
     this.filterQ.set(this.filterDraft());
+    const q = this.filterQ().trim();
+    this.assignmentsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
+    this.assignmentsService.loadPage(0, this.pageSize(), {});
   }
 
   onGroupChange(value: string): void {
@@ -97,16 +99,15 @@ export class Profesores {
     const v = this.addForm.getRawValue();
     this.assignmentsService
       .add({ userId: +v.userId, groupId: +v.groupId, subjectId: +v.subjectId })
-      .subscribe((result) => {
-        if (result === null) {
-          this.duplicateError.set(true);
-          return;
-        }
-        this.duplicateError.set(false);
-        this.addForm.reset();
-        this.selectedGroupId.set(null);
-        this._subjects.set([]);
-        this.showAddForm.set(false);
+      .subscribe({
+        next: () => {
+          this.duplicateError.set(false);
+          this.addForm.reset();
+          this.selectedGroupId.set(null);
+          this._subjects.set([]);
+          this.showAddForm.set(false);
+        },
+        error: () => this.duplicateError.set(true),
       });
   }
 
@@ -114,23 +115,6 @@ export class Profesores {
     this.confirm.confirm('¿Eliminar esta asignación?').subscribe((ok) => {
       if (ok) this.assignmentsService.delete(id).subscribe();
     });
-  }
-
-  getTeacherName(userId: number): string {
-    const t = this.usersService.users().find((u) => u.id === userId);
-    return t ? `${t.nombre} ${t.apellido}` : String(userId);
-  }
-
-  getGroupName(groupId: number): string {
-    return this.groups().find((g) => g.id === groupId)?.nombre ?? String(groupId);
-  }
-
-  getSubjectName(subjectId: number): string {
-    for (const program of this.programs()) {
-      const subject = program.materias.find((s) => s.id === subjectId);
-      if (subject) return `${subject.clave} – ${subject.nombre}`;
-    }
-    return String(subjectId);
   }
 
   onPageChange(page: number): void {
