@@ -87,4 +87,9 @@ public class GrupoController {
         grupoService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<GrupoResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(grupoService.restore(id));
+    }
 }

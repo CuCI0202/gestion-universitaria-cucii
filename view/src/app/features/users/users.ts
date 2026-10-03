@@ -1,11 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { UsersService } from '../../core/services/users.service';
 import { CampusesService } from '../../core/services/campuses.service';
 import { User } from '../../core/models/user.model';
 import { Campus } from '../../core/models/campus.model';
 import { UserRole, mapRolId } from '../../core/models/auth.model';
+import { QueryFilters } from '../../core/services/http-params';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -18,6 +20,7 @@ export class Users {
   private readonly campusesService = inject(CampusesService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly users = this.usersService.users;
   readonly totalElements = this.usersService.totalElements;
@@ -30,6 +33,7 @@ export class Users {
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
   readonly showPassword = signal(false);
+  readonly showArchived = signal(false);
 
   constructor() {
     this.campusesService.getCatalog().subscribe({ next: (c) => this.campuses.set(c) });
@@ -54,16 +58,28 @@ export class Users {
     { id: 5, label: 'Coordinador' },
   ];
 
+  private buildFilters(): QueryFilters {
+    const q = this.filterQ().trim();
+    return {
+      ...(q ? { search: q } : {}),
+      ...(this.showArchived() ? {} : { isActive: true }),
+    };
+  }
+
   search(): void {
     this.filterQ.set(this.filterDraft());
-    const q = this.filterQ().trim();
-    this.usersService.loadPage(0, this.pageSize(), q ? { search: q } : {});
+    this.usersService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
-    this.usersService.loadPage(0, this.pageSize(), {});
+    this.usersService.loadPage(0, this.pageSize(), this.buildFilters());
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.usersService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   startEdit(user: User): void {
@@ -117,20 +133,34 @@ export class Users {
         rolId: v.rolId,
         plantelId: v.plantelId,
         password: v.password.trim() || undefined,
-      }).subscribe();
+      }).subscribe({
+        next: () => this.notifications.success('Usuario actualizado.'),
+      });
     } else {
       if (!v.password.trim()) {
         this.form.controls.password.markAsTouched();
         return;
       }
-      this.usersService.add(v).subscribe();
+      this.usersService.add(v).subscribe({
+        next: () => this.notifications.success('Usuario registrado.'),
+      });
     }
     this.closeForm();
   }
 
   delete(id: number): void {
-    this.confirm.confirm('¿Eliminar este usuario?').subscribe((ok) => {
-      if (ok) this.usersService.delete(id).subscribe();
+    this.confirm.confirm('¿Archivar este usuario?').subscribe((ok) => {
+      if (ok) {
+        this.usersService.delete(id).subscribe({
+          next: () => this.notifications.success('Usuario archivado.'),
+        });
+      }
+    });
+  }
+
+  restore(id: number): void {
+    this.usersService.restore(id).subscribe({
+      next: () => this.notifications.success('Usuario restaurado.'),
     });
   }
 

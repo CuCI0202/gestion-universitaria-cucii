@@ -9,6 +9,7 @@ export interface Program {
   duracionCuatrimestres: number;
   cantidadMaterias: number;
   materias: Subject[];
+  isActive: boolean;
 }
 
 export interface Subject {
@@ -17,4 +18,5 @@ export interface Subject {
   nombre: string;
   cuatrimestre: number;
   creditos: number | null;
+  isActive: boolean;
 }

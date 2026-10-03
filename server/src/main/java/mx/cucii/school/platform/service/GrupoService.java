@@ -150,6 +150,17 @@ public class GrupoService {
         repository.softDeleteById(id, OffsetDateTime.now());
     }
 
+    @Transactional
+    public GrupoResponse restore(Integer id) {
+        Grupo existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Grupo no encontrado: " + id));
+        if (!existing.isActive()) {
+            repository.restoreById(id, OffsetDateTime.now());
+        }
+        return toResponse(repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Grupo no encontrado: " + id)));
+    }
+
     private void validateRequest(GrupoRequest request) {
         if (request.nombre() == null || request.nombre().isBlank()) {
             throw new IllegalArgumentException("El nombre es obligatorio");

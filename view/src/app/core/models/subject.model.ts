@@ -4,4 +4,5 @@ export interface Subject {
   nombre: string;
   cuatrimestre: number;
   creditos: number | null;
+  isActive: boolean;
 }

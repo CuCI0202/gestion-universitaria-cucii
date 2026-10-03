@@ -11,4 +11,5 @@ export interface Campus {
   estado: string;
   pais?: string;
   directorNombre?: string;
+  isActive: boolean;
 }

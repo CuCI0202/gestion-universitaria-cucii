@@ -97,7 +97,12 @@
             Limpiar
           </button>
         }
-        <span class="text-sm text-gray-500">{{ filtered().length }} resultado(s)</span>
+        <label class="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap cursor-pointer select-none">
+          <input type="checkbox" [checked]="showArchived()" (change)="toggleArchived()"
+            class="rounded border-gray-300 text-primary focus:ring-primary" />
+          Mostrar archivados
+        </label>
+        <span class="text-sm text-gray-500">{{ totalElements() }} resultado(s)</span>
       </div>
 
       <div class="overflow-auto max-h-[500px]">
@@ -115,8 +120,15 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             @for (program of filtered(); track program.id) {
-              <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 font-medium text-gray-800">{{ program.nombre }}</td>
+              <tr class="hover:bg-gray-50 transition-colors" [class.opacity-60]="!program.isActive">
+                <td class="px-4 py-3 font-medium text-gray-800">
+                  {{ program.nombre }}
+                  @if (!program.isActive) {
+                    <span class="ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-gray-200 text-gray-600 border border-gray-300 align-middle">
+                      Archivado &mdash; Eliminado
+                    </span>
+                  }
+                </td>
                 <td class="px-4 py-3 text-gray-600 text-xs">{{ program.grado }}</td>
                 <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ program.numeroRvoe }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ program.fechaRvoe }}</td>
@@ -131,16 +143,23 @@
                   </span>
                 </td>
                 <td class="px-4 py-3 text-center">
-                  <div class="flex justify-center gap-2">
-                    <button (click)="startEdit(program)"
+                  @if (program.isActive) {
+                    <div class="flex justify-center gap-2">
+                      <button (click)="startEdit(program)"
+                        class="text-primary hover:text-primary-dark text-xs font-medium">
+                        Editar
+                      </button>
+                      <button (click)="delete(program.id)"
+                        class="text-red-500 hover:text-red-700 text-xs font-medium">
+                        Eliminar
+                      </button>
+                    </div>
+                  } @else {
+                    <button (click)="restore(program.id)"
                       class="text-primary hover:text-primary-dark text-xs font-medium">
-                      Editar
+                      Restaurar
                     </button>
-                    <button (click)="delete(program.id)"
-                      class="text-red-500 hover:text-red-700 text-xs font-medium">
-                      Eliminar
-                    </button>
-                  </div>
+                  }
                 </td>
               </tr>
             } @empty {

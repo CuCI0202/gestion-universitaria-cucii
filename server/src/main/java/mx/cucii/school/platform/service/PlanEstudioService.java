@@ -139,6 +139,19 @@ public class PlanEstudioService {
         repository.softDeleteById(id, now);
     }
 
+    @Transactional
+    public PlanEstudioResponse restore(Integer id) {
+        PlanEstudio existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan de estudio no encontrado: " + id));
+        if (!existing.isActive()) {
+            OffsetDateTime now = OffsetDateTime.now();
+            repository.restoreMateriasByPlanEstudioId(id, now);
+            repository.restoreById(id, now);
+        }
+        return toResponse(repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan de estudio no encontrado: " + id)));
+    }
+
     private void validateRequest(PlanEstudioRequest request) {
         if (!GRADOS_VALIDOS.contains(request.grado())) {
             throw new IllegalArgumentException("Grado inválido. Valores permitidos: Licenciatura, Maestría, Doctorado");

@@ -106,6 +106,17 @@ public class PlantelService {
         repository.softDeleteById(id, OffsetDateTime.now());
     }
 
+    @Transactional
+    public PlantelResponse restore(Integer id) {
+        Plantel existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plantel no encontrado: " + id));
+        if (!existing.isActive()) {
+            repository.restoreById(id, OffsetDateTime.now());
+        }
+        return toResponse(repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plantel no encontrado: " + id)));
+    }
+
     private void validateRequest(PlantelRequest request) {
         if (request.nombreOficial() == null || request.nombreOficial().isBlank()) {
             throw new IllegalArgumentException("El nombre oficial es obligatorio");

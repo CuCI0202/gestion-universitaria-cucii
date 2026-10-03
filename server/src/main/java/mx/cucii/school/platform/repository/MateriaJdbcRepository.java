@@ -174,4 +174,11 @@ public class MateriaJdbcRepository {
                 now, id
         );
     }
+
+    public void restoreById(Integer id, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE materias SET is_active = true, updated_at = ? WHERE id = ?",
+                now, id
+        );
+    }
 }

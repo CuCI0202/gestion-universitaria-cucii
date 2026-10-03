@@ -26,7 +26,7 @@ export class ProgramsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
-  private _filters: QueryFilters = {};
+  private _filters: QueryFilters = { isActive: true };
 
   constructor() {
     this.loadPage(0);
@@ -50,7 +50,7 @@ export class ProgramsService {
 
   getCatalog(size = 100): Observable<Program[]> {
     return this.http.get<PaginatedResponse<any>>(`${environment.apiUrl}/planes-estudio/con-materias-count`, {
-      params: buildParams({ size }),
+      params: buildParams({ size, isActive: true }),
     }).pipe(map((res) => res.content.map(toProgram)));
   }
 
@@ -102,13 +102,29 @@ export class ProgramsService {
     );
   }
 
+  restore(id: number): Observable<Program> {
+    return this.http.post<Program>(`${environment.apiUrl}/planes-estudio/${id}/restore`, {}).pipe(
+      tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
   getSubjectsByProgram(programId: number): Observable<Subject[]> {
     return this.http.get<any>(`${environment.apiUrl}/planes-estudio/${programId}/con-materias`).pipe(
       map((res) => res.materias ?? []),
     );
   }
 
-  addSubject(programId: number, subject: Omit<Subject, 'id'>): Observable<Subject> {
+  getSubjectsByProgramFiltered(programId: number, showArchived = false): Observable<Subject[]> {
+    return this.http.get<PaginatedResponse<Subject>>(`${environment.apiUrl}/materias`, {
+      params: buildParams({
+        planEstudioId: programId,
+        size: 100,
+        ...(showArchived ? {} : { isActive: true }),
+      }),
+    }).pipe(map((res) => res.content));
+  }
+
+  addSubject(programId: number, subject: Omit<Subject, 'id' | 'isActive'>): Observable<Subject> {
     return this.http.post<any>(`${environment.apiUrl}/materias`, {
       ...subject,
       planEstudioId: programId,
@@ -123,7 +139,7 @@ export class ProgramsService {
     );
   }
 
-  updateSubject(programId: number, subjectId: number, changes: Omit<Subject, 'id'>): Observable<Subject> {
+  updateSubject(programId: number, subjectId: number, changes: Omit<Subject, 'id' | 'isActive'>): Observable<Subject> {
     return this.http.put<any>(`${environment.apiUrl}/materias/${subjectId}`, {
       ...changes,
       planEstudioId: programId,
@@ -152,6 +168,18 @@ export class ProgramsService {
       ),
     );
   }
+
+  restoreSubject(programId: number, subjectId: number): Observable<Subject> {
+    return this.http.post<Subject>(`${environment.apiUrl}/materias/${subjectId}/restore`, {}).pipe(
+      tap((res) =>
+        this._programs.update((list) =>
+          list.map((p) =>
+            p.id !== programId ? p : { ...p, materias: p.materias.map((s) => (s.id === subjectId ? res : s)), cantidadMaterias: p.cantidadMaterias + 1 }
+          )
+        )
+      ),
+    );
+  }
 }
 
 function toProgram(p: any): Program {
@@ -164,5 +192,6 @@ function toProgram(p: any): Program {
     duracionCuatrimestres: p.duracionCuatrimestres,
     cantidadMaterias: p.cantidadMaterias ?? 0,
     materias: [],
+    isActive: p.isActive,
   };
 }

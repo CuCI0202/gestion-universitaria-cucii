@@ -108,6 +108,17 @@ public class UsuarioService {
         }
     }
 
+    @Transactional
+    public UsuarioResponse restore(Integer id) {
+        Usuario existing = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + id));
+        if (!existing.isActive()) {
+            usuarioRepository.restoreById(id, OffsetDateTime.now());
+        }
+        return toResponse(usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + id)));
+    }
+
     private UsuarioResponse toResponse(Usuario u) {
         String rolNombre = rolRepository.findById(u.rolId())
                 .map(Rol::nombre)

@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { ProgramsService } from '../../core/services/programs.service';
 import { Program, Subject } from '../../core/models/program.model';
 
@@ -13,10 +14,12 @@ export class Subjects {
   private readonly programsService = inject(ProgramsService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly programs = signal<Program[]>([]);
   readonly selectedProgramId = signal<number>(0);
   readonly editingId = signal<number | null>(null);
+  readonly showArchived = signal(false);
   private readonly _subjects = signal<Subject[]>([]);
   readonly subjects = this._subjects.asReadonly();
 
@@ -42,9 +45,14 @@ export class Subjects {
   private loadSubjects(): void {
     const id = this.selectedProgramId();
     if (!id) return;
-    this.programsService.getSubjectsByProgram(id).subscribe({
+    this.programsService.getSubjectsByProgramFiltered(id, this.showArchived()).subscribe({
       next: (res) => this._subjects.set(res),
     });
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.loadSubjects();
   }
 
   onProgramChange(value: string): void {
@@ -78,11 +86,13 @@ export class Subjects {
     const id = this.editingId();
     if (id !== null) {
       this.programsService.updateSubject(programId, id, v).subscribe(() => {
+        this.notifications.success('Materia actualizada.');
         this.loadSubjects();
         this.closeForm();
       });
     } else {
       this.programsService.addSubject(programId, v).subscribe(() => {
+        this.notifications.success('Materia registrada.');
         this.loadSubjects();
         this.closeForm();
       });
@@ -90,10 +100,18 @@ export class Subjects {
   }
 
   delete(subjectId: number): void {
-    this.confirm.confirm('¿Eliminar esta materia?').subscribe((ok) => {
+    this.confirm.confirm('¿Archivar esta materia?').subscribe((ok) => {
       if (ok) this.programsService.deleteSubject(this.selectedProgramId(), subjectId).subscribe(() => {
+        this.notifications.success('Materia archivada.');
         this.loadSubjects();
       });
+    });
+  }
+
+  restore(subjectId: number): void {
+    this.programsService.restoreSubject(this.selectedProgramId(), subjectId).subscribe(() => {
+      this.notifications.success('Materia restaurada.');
+      this.loadSubjects();
     });
   }
 }

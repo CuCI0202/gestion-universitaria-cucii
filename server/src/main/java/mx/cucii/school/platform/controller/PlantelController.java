@@ -50,4 +50,9 @@ public class PlantelController {
         plantelService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<PlantelResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(plantelService.restore(id));
+    }
 }

@@ -187,4 +187,11 @@ public class PlantelJdbcRepository {
                 now, id
         );
     }
+
+    public void restoreById(Integer id, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE planteles SET is_active = true, updated_at = ? WHERE id = ?",
+                now, id
+        );
+    }
 }
