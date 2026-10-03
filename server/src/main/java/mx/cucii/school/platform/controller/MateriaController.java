@@ -50,4 +50,9 @@ public class MateriaController {
         materiaService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<MateriaResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(materiaService.restore(id));
+    }
 }

@@ -177,6 +177,13 @@ public class UsuarioJdbcRepository {
         );
     }
 
+    public void restoreById(Integer id, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE usuarios SET is_active = true, updated_at = ? WHERE id = ?",
+                now, id
+        );
+    }
+
     public void deleteById(Integer id) {
         jdbcTemplate.update("DELETE FROM usuarios WHERE id = ?", id);
     }

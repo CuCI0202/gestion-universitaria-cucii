@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { ProgramsService } from '../../core/services/programs.service';
 import { Program, Degree } from '../../core/models/program.model';
+import { QueryFilters } from '../../core/services/http-params';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -14,6 +16,7 @@ export class Programs {
   private readonly programsService = inject(ProgramsService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly programs = this.programsService.programs;
   readonly totalElements = this.programsService.totalElements;
@@ -24,6 +27,7 @@ export class Programs {
   readonly filterQ = signal('');
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
+  readonly showArchived = signal(false);
 
   readonly filtered = computed(() => this.programs());
 
@@ -37,16 +41,28 @@ export class Programs {
     duracionCuatrimestres: [1, [Validators.required, Validators.min(1)]],
   });
 
+  private buildFilters(): QueryFilters {
+    const q = this.filterQ().trim();
+    return {
+      ...(q ? { search: q } : {}),
+      ...(this.showArchived() ? {} : { isActive: true }),
+    };
+  }
+
   search(): void {
     this.filterQ.set(this.filterDraft());
-    const q = this.filterQ().trim();
-    this.programsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
+    this.programsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
-    this.programsService.loadPage(0, this.pageSize(), {});
+    this.programsService.loadPage(0, this.pageSize(), this.buildFilters());
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.programsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   startEdit(program: Program): void {
@@ -89,16 +105,30 @@ export class Programs {
     const v = this.form.getRawValue();
     const id = this.editingId();
     if (id !== null) {
-      this.programsService.update(id, v).subscribe();
+      this.programsService.update(id, v).subscribe({
+        next: () => this.notifications.success('Carrera actualizada.'),
+      });
     } else {
-      this.programsService.add(v).subscribe();
+      this.programsService.add(v).subscribe({
+        next: () => this.notifications.success('Carrera registrada.'),
+      });
     }
     this.closeForm();
   }
 
   delete(id: number): void {
-    this.confirm.confirm('¿Eliminar esta carrera?').subscribe((ok) => {
-      if (ok) this.programsService.delete(id).subscribe();
+    this.confirm.confirm('¿Archivar esta carrera?').subscribe((ok) => {
+      if (ok) {
+        this.programsService.delete(id).subscribe({
+          next: () => this.notifications.success('Carrera archivada.'),
+        });
+      }
+    });
+  }
+
+  restore(id: number): void {
+    this.programsService.restore(id).subscribe({
+      next: () => this.notifications.success('Carrera restaurada.'),
     });
   }
 

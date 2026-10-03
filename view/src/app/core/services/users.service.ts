@@ -26,7 +26,7 @@ export class UsersService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
-  private _filters: QueryFilters = {};
+  private _filters: QueryFilters = { isActive: true };
 
   constructor() {
     this.loadPage(0);
@@ -80,13 +80,19 @@ export class UsersService {
     );
   }
 
+  restore(id: number): Observable<User> {
+    return this.http.post<User>(`${environment.apiUrl}/usuarios/${id}/restore`, {}).pipe(
+      tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
   getById(id: number): Observable<User> {
     return this.http.get<User>(`${environment.apiUrl}/usuarios/${id}`);
   }
 
   getTeachers(): Observable<User[]> {
     return this.http.get<PaginatedResponse<UsuarioResponse>>(`${environment.apiUrl}/usuarios`, {
-      params: buildParams({ rolId: 3, size: 100 }),
+      params: buildParams({ rolId: 3, size: 100, isActive: true }),
     }).pipe(map((res) => res.content));
   }
 }

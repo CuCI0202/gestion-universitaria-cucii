@@ -1,7 +1,7 @@
 # Plan de ejecución hacia Beta v0.1 — Gestión Universitaria CUCII
 
 > Documento de continuidad. Si la sesión se interrumpe, retomar desde aquí.
-> Estado: **Fase 0 + 1.1 + 1.4 + 1.5 + 1.6 completadas** (rama `fix/alumnos-soft-delete-ui`). Batch CSV movido a Fase 3 (3.4/3.5).
+> Estado: **Fase 0 + 1.1 + 1.4 + 1.5 + 1.6 + 1.7 completadas** (rama `feat/1.7-archivados-cruds`). Batch CSV movido a Fase 3 (3.4/3.5).
 > Última actualización: 2026-09-30
 
 ---
@@ -108,7 +108,7 @@ Código en inglés, texto al usuario en español.
 - [x] **1.4** Validación alumno↔grupo al registrar/actualizar calificación: `CalificacionService.validateEnrollment` (fila activa en `alumnos_grupos`) + FK compuesta `fk_calificaciones_alumno_grupo` en `database/db_structure.sql`. Validado (400 con mensaje claro; constraint en BD).
 - [x] **1.5** Catálogos completos en selects (opción 1): `ProgramsService.getCatalog()` y `CampusesService.getCatalog()` (`size=100`); Groups/Users/Subjects cargan catálogos en señales locales. Profesores ya usaba `size=100`. Pendiente post-beta: migrar a typeahead si un catálogo supera 100.
 - [x] **1.6** Gestión global de errores: `NotificationService` + `ToastComponent` (global en App) + `errorInterceptor` que muestra el mensaje del backend en cualquier error (salvo 401); opt-out `SKIP_ERROR_NOTIFICATION`. Backend: mensajes diferenciados para duplicados de alumno archivado + `POST /alumnos/{id}/restore` (botón "Restaurar" y toasts en la pantalla de Alumnos). Base aplicable a toda la plataforma; falta extenderla al resto de pantallas.
-- [ ] **1.7** Extender a **Grupos, Materias, Planes de estudio, Planteles y Usuarios**: UX de archivados (toggle "Mostrar archivados" + badge "Archivado — Eliminado" + botón "Restaurar" con endpoint `POST /{recurso}/{id}/restore`) y toasts de éxito en crear/editar/archivar. La **visibilidad de errores ya es global** vía `errorInterceptor`; falta la parte de archivados/éxito por recurso.
+- [x] **1.7** Extender a **Grupos, Materias, Planes de estudio, Planteles y Usuarios**: UX de archivados (toggle "Mostrar archivados" + badge "Archivado — Eliminado" + botón "Restaurar" con endpoint `POST /{recurso}/{id}/restore`) y toasts de éxito en crear/editar/archivar. La **visibilidad de errores ya es global** vía `errorInterceptor`. Backend: `restore` en los 5 servicios/repositorios/controllers; el restore de plan de estudio **cascada** a sus materias. Frontend: `isActive` agregado a modelos `Group/Campus/Program/Subject`, filtro por defecto `{isActive:true}` y `restore()` en los servicios; la pantalla Materias usa `GET /materias?planEstudioId=&isActive=` para poder listar archivadas.
 
 ### Fase 2 — Despliegue beta en VPS
 - [ ] **2.1** `server/Dockerfile` (multi-stage: Maven → `eclipse-temurin:21-jre`).

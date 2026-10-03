@@ -4,4 +4,5 @@ export interface Group {
   nombre: string;
   planEstudioId: number;
   plantelId: number;
+  isActive: boolean;
 }

@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { CampusesService } from '../../core/services/campuses.service';
 import { Campus } from '../../core/models/campus.model';
+import { QueryFilters } from '../../core/services/http-params';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -14,6 +16,7 @@ export class Campuses {
   private readonly campusesService = inject(CampusesService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly campuses = this.campusesService.campuses;
   readonly totalElements = this.campusesService.totalElements;
@@ -24,6 +27,7 @@ export class Campuses {
   readonly filterQ = signal('');
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
+  readonly showArchived = signal(false);
 
   readonly filtered = computed(() => this.campuses());
 
@@ -41,16 +45,28 @@ export class Campuses {
     directorNombre: [''],
   });
 
+  private buildFilters(): QueryFilters {
+    const q = this.filterQ().trim();
+    return {
+      ...(q ? { search: q } : {}),
+      ...(this.showArchived() ? {} : { isActive: true }),
+    };
+  }
+
   search(): void {
     this.filterQ.set(this.filterDraft());
-    const q = this.filterQ().trim();
-    this.campusesService.loadPage(0, this.pageSize(), q ? { search: q } : {});
+    this.campusesService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
-    this.campusesService.loadPage(0, this.pageSize(), {});
+    this.campusesService.loadPage(0, this.pageSize(), this.buildFilters());
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.campusesService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   startEdit(campus: Campus): void {
@@ -112,16 +128,30 @@ export class Campuses {
     };
     const id = this.editingId();
     if (id !== null) {
-      this.campusesService.update(id, payload).subscribe();
+      this.campusesService.update(id, payload).subscribe({
+        next: () => this.notifications.success('Plantel actualizado.'),
+      });
     } else {
-      this.campusesService.add(payload).subscribe();
+      this.campusesService.add(payload).subscribe({
+        next: () => this.notifications.success('Plantel registrado.'),
+      });
     }
     this.closeForm();
   }
 
   delete(id: number): void {
-    this.confirm.confirm('¿Eliminar este plantel?').subscribe((ok) => {
-      if (ok) this.campusesService.delete(id).subscribe();
+    this.confirm.confirm('¿Archivar este plantel?').subscribe((ok) => {
+      if (ok) {
+        this.campusesService.delete(id).subscribe({
+          next: () => this.notifications.success('Plantel archivado.'),
+        });
+      }
+    });
+  }
+
+  restore(id: number): void {
+    this.campusesService.restore(id).subscribe({
+      next: () => this.notifications.success('Plantel restaurado.'),
     });
   }
 

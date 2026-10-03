@@ -97,6 +97,17 @@ public class MateriaService {
         materiaRepository.softDeleteById(existing.id(), OffsetDateTime.now());
     }
 
+    @Transactional
+    public MateriaResponse restore(Integer id) {
+        Materia existing = materiaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Materia no encontrada: " + id));
+        if (!existing.isActive()) {
+            materiaRepository.restoreById(id, OffsetDateTime.now());
+        }
+        return toResponse(materiaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Materia no encontrada: " + id)));
+    }
+
     private void validateCreditos(BigDecimal creditos) {
         if (creditos != null) {
             if (creditos.compareTo(BigDecimal.ZERO) < 0 ||

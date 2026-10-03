@@ -26,7 +26,7 @@ export class CampusesService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
-  private _filters: QueryFilters = {};
+  private _filters: QueryFilters = { isActive: true };
 
   constructor() {
     this.loadPage(0);
@@ -49,14 +49,16 @@ export class CampusesService {
   }
 
   getAll(): Observable<Campus[]> {
-    return this.http.get<PaginatedResponse<Campus>>(`${environment.apiUrl}/planteles`).pipe(
+    return this.http.get<PaginatedResponse<Campus>>(`${environment.apiUrl}/planteles`, {
+      params: buildParams({ isActive: true }),
+    }).pipe(
       map((res) => res.content),
     );
   }
 
   getCatalog(size = 100): Observable<Campus[]> {
     return this.http.get<PaginatedResponse<Campus>>(`${environment.apiUrl}/planteles`, {
-      params: buildParams({ size }),
+      params: buildParams({ size, isActive: true }),
     }).pipe(map((res) => res.content));
   }
 
@@ -64,7 +66,7 @@ export class CampusesService {
     return this.http.get<Campus>(`${environment.apiUrl}/planteles/${id}`);
   }
 
-  add(campus: Omit<Campus, 'id'>): Observable<Campus> {
+  add(campus: Omit<Campus, 'id' | 'isActive'>): Observable<Campus> {
     return this.http.post<Campus>(`${environment.apiUrl}/planteles`, campus).pipe(
       tap(() => this.loadPage(this._currentPage())),
     );
@@ -80,6 +82,12 @@ export class CampusesService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/planteles/${id}`).pipe(
+      tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
+  restore(id: number): Observable<Campus> {
+    return this.http.post<Campus>(`${environment.apiUrl}/planteles/${id}/restore`, {}).pipe(
       tap(() => this.loadPage(this._currentPage())),
     );
   }

@@ -202,9 +202,23 @@ public class PlanEstudioJdbcRepository {
         );
     }
 
+    public void restoreById(Integer id, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE planes_estudio SET is_active = true, updated_at = ? WHERE id = ?",
+                now, id
+        );
+    }
+
     public void softDeleteMateriasByPlanEstudioId(Integer planEstudioId, OffsetDateTime now) {
         jdbcTemplate.update(
                 "UPDATE materias SET is_active = false, updated_at = ? WHERE plan_estudio_id = ? AND is_active = true",
+                now, planEstudioId
+        );
+    }
+
+    public void restoreMateriasByPlanEstudioId(Integer planEstudioId, OffsetDateTime now) {
+        jdbcTemplate.update(
+                "UPDATE materias SET is_active = true, updated_at = ? WHERE plan_estudio_id = ? AND is_active = false",
                 now, planEstudioId
         );
     }

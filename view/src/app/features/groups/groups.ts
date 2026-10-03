@@ -2,12 +2,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { ProgramsService } from '../../core/services/programs.service';
 import { CampusesService } from '../../core/services/campuses.service';
 import { Group } from '../../core/models/group.model';
 import { Program } from '../../core/models/program.model';
 import { Campus } from '../../core/models/campus.model';
+import { QueryFilters } from '../../core/services/http-params';
 import { PaginationComponent } from '../../shared/components/pagination/pagination';
 
 @Component({
@@ -22,6 +24,7 @@ export class Groups {
   private readonly campusesService = inject(CampusesService);
   private readonly fb = inject(FormBuilder);
   private readonly confirm = inject(ConfirmService);
+  private readonly notifications = inject(NotificationService);
 
   readonly groups = this.groupsService.groups;
   readonly totalElements = this.groupsService.totalElements;
@@ -34,6 +37,7 @@ export class Groups {
   readonly filterQ = signal('');
   readonly editingId = signal<number | null>(null);
   readonly showForm = signal(false);
+  readonly showArchived = signal(false);
 
   constructor() {
     this.programsService.getCatalog().subscribe({ next: (p) => this.programs.set(p) });
@@ -49,16 +53,28 @@ export class Groups {
     plantelId: ['', Validators.required],
   });
 
+  private buildFilters(): QueryFilters {
+    const q = this.filterQ().trim();
+    return {
+      ...(q ? { search: q } : {}),
+      ...(this.showArchived() ? {} : { isActive: true }),
+    };
+  }
+
   search(): void {
     this.filterQ.set(this.filterDraft());
-    const q = this.filterQ().trim();
-    this.groupsService.loadPage(0, this.pageSize(), q ? { search: q } : {});
+    this.groupsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   clearFilter(): void {
     this.filterDraft.set('');
     this.filterQ.set('');
-    this.groupsService.loadPage(0, this.pageSize(), {});
+    this.groupsService.loadPage(0, this.pageSize(), this.buildFilters());
+  }
+
+  toggleArchived(): void {
+    this.showArchived.update((v) => !v);
+    this.groupsService.loadPage(0, this.pageSize(), this.buildFilters());
   }
 
   getProgramName(id: number): string {
@@ -114,16 +130,30 @@ export class Groups {
     };
     const id = this.editingId();
     if (id !== null) {
-      this.groupsService.update(id, payload).subscribe();
+      this.groupsService.update(id, payload).subscribe({
+        next: () => this.notifications.success('Grupo actualizado.'),
+      });
     } else {
-      this.groupsService.add(payload).subscribe();
+      this.groupsService.add(payload).subscribe({
+        next: () => this.notifications.success('Grupo registrado.'),
+      });
     }
     this.closeForm();
   }
 
   delete(id: number): void {
-    this.confirm.confirm('¿Eliminar este grupo?').subscribe((ok) => {
-      if (ok) this.groupsService.delete(id).subscribe();
+    this.confirm.confirm('¿Archivar este grupo?').subscribe((ok) => {
+      if (ok) {
+        this.groupsService.delete(id).subscribe({
+          next: () => this.notifications.success('Grupo archivado.'),
+        });
+      }
+    });
+  }
+
+  restore(id: number): void {
+    this.groupsService.restore(id).subscribe({
+      next: () => this.notifications.success('Grupo restaurado.'),
     });
   }
 

@@ -56,4 +56,9 @@ public class UsuarioController {
                 : "Usuario eliminado correctamente";
         return ResponseEntity.ok(Map.of("message", message));
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<UsuarioResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(usuarioService.restore(id));
+    }
 }

@@ -73,4 +73,9 @@ public class PlanEstudioController {
         planEstudioService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<PlanEstudioResponse> restore(@PathVariable Integer id) {
+        return ResponseEntity.ok(planEstudioService.restore(id));
+    }
 }

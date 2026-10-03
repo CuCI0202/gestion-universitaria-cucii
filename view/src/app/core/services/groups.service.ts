@@ -27,7 +27,7 @@ export class GroupsService {
   private readonly _pageSize = signal(20);
   readonly pageSize = this._pageSize.asReadonly();
 
-  private _filters: QueryFilters = {};
+  private _filters: QueryFilters = { isActive: true };
 
   constructor() {
     this.loadPage(0);
@@ -51,7 +51,7 @@ export class GroupsService {
 
   getAll(size = 100): Observable<Group[]> {
     return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`, {
-      params: buildParams({ size }),
+      params: buildParams({ size, isActive: true }),
     }).pipe(map((res) => res.content));
   }
 
@@ -61,7 +61,7 @@ export class GroupsService {
 
   getByProgram(planEstudioId: number): Observable<Group[]> {
     return this.http.get<PaginatedResponse<Group>>(`${environment.apiUrl}/grupos`, {
-      params: buildParams({ planEstudioId, size: 100 }),
+      params: buildParams({ planEstudioId, size: 100, isActive: true }),
     }).pipe(map((res) => res.content));
   }
 
@@ -82,7 +82,7 @@ export class GroupsService {
     );
   }
 
-  add(group: Omit<Group, 'id'>): Observable<Group> {
+  add(group: Omit<Group, 'id' | 'isActive'>): Observable<Group> {
     return this.http.post<Group>(`${environment.apiUrl}/grupos`, group).pipe(
       tap(() => this.loadPage(this._currentPage())),
     );
@@ -98,6 +98,12 @@ export class GroupsService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/grupos/${id}`).pipe(
+      tap(() => this.loadPage(this._currentPage())),
+    );
+  }
+
+  restore(id: number): Observable<Group> {
+    return this.http.post<Group>(`${environment.apiUrl}/grupos/${id}/restore`, {}).pipe(
       tap(() => this.loadPage(this._currentPage())),
     );
   }
