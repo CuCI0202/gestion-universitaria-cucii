@@ -6,12 +6,15 @@ import mx.cucii.school.platform.dto.AlumnoResponse;
 import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.Alumno;
+import mx.cucii.school.platform.repository.AlumnoGrupoJdbcRepository;
 import mx.cucii.school.platform.repository.AlumnoJdbcRepository;
+import mx.cucii.school.platform.repository.CalificacionJdbcRepository;
 import mx.cucii.school.platform.repository.EstatusAlumnoJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,6 +25,8 @@ public class AlumnoService {
 
     private final AlumnoJdbcRepository repository;
     private final EstatusAlumnoJdbcRepository estatusAlumnoRepository;
+    private final AlumnoGrupoJdbcRepository alumnoGrupoRepository;
+    private final CalificacionJdbcRepository calificacionRepository;
 
     public PageResponse<AlumnoResponse> findAll(int page, int size, String search, String curp,
                                                 String correoInstitucional, Integer estatusId,
@@ -154,6 +159,15 @@ public class AlumnoService {
     public void delete(Integer id) {
         if (repository.findById(id).isEmpty()) {
             throw new ResourceNotFoundException("Alumno no encontrado: " + id);
+        }
+        long grupos = alumnoGrupoRepository.countActiveByAlumno(id);
+        long calificaciones = calificacionRepository.countActiveByAlumno(id);
+        if (grupos > 0 || calificaciones > 0) {
+            List<String> dependencias = new ArrayList<>();
+            if (grupos > 0) dependencias.add(grupos + " grupo(s) asignado(s)");
+            if (calificaciones > 0) dependencias.add(calificaciones + " calificación(es) registrada(s)");
+            throw new IllegalArgumentException(
+                    "No se puede archivar el alumno: tiene " + String.join(" y ", dependencias));
         }
         repository.softDeleteById(id, OffsetDateTime.now());
     }

@@ -6,11 +6,14 @@ import mx.cucii.school.platform.dto.PlantelResponse;
 import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.Plantel;
+import mx.cucii.school.platform.repository.GrupoJdbcRepository;
 import mx.cucii.school.platform.repository.PlantelJdbcRepository;
+import mx.cucii.school.platform.repository.UsuarioJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -20,6 +23,8 @@ public class PlantelService {
     private static final String PAIS_DEFAULT = "México";
 
     private final PlantelJdbcRepository repository;
+    private final GrupoJdbcRepository grupoRepository;
+    private final UsuarioJdbcRepository usuarioRepository;
 
     public PageResponse<PlantelResponse> findAll(int page, int size, String search,
                                                  String estado, String pais, Boolean isActive,
@@ -52,18 +57,18 @@ public class PlantelService {
         Plantel plantel = new Plantel(
                 null,
                 request.nombreOficial(),
-                request.nombreCorto(),
-                request.direccionCalle(),
-                request.direccionNumeroExt(),
+                orEmpty(request.nombreCorto()),
+                orEmpty(request.direccionCalle()),
+                orEmpty(request.direccionNumeroExt()),
                 request.direccionNumeroInt(),
-                request.colonia(),
-                request.codigoPostal(),
+                orEmpty(request.colonia()),
+                orEmpty(request.codigoPostal()),
                 request.ciudadMunicipio(),
                 request.estado(),
                 request.pais() != null ? request.pais() : PAIS_DEFAULT,
                 request.latitud(),
                 request.longitud(),
-                request.directorNombre(),
+                orEmpty(request.directorNombre()),
                 true,
                 now,
                 now
@@ -79,18 +84,18 @@ public class PlantelService {
         Plantel updated = new Plantel(
                 existing.id(),
                 request.nombreOficial(),
-                request.nombreCorto(),
-                request.direccionCalle(),
-                request.direccionNumeroExt(),
+                orEmpty(request.nombreCorto()),
+                orEmpty(request.direccionCalle()),
+                orEmpty(request.direccionNumeroExt()),
                 request.direccionNumeroInt(),
-                request.colonia(),
-                request.codigoPostal(),
+                orEmpty(request.colonia()),
+                orEmpty(request.codigoPostal()),
                 request.ciudadMunicipio(),
                 request.estado(),
                 request.pais() != null ? request.pais() : PAIS_DEFAULT,
                 request.latitud(),
                 request.longitud(),
-                request.directorNombre(),
+                orEmpty(request.directorNombre()),
                 existing.isActive(),
                 existing.createdAt(),
                 OffsetDateTime.now()
@@ -102,6 +107,15 @@ public class PlantelService {
     public void delete(Integer id) {
         if (repository.findById(id).isEmpty()) {
             throw new ResourceNotFoundException("Plantel no encontrado: " + id);
+        }
+        long grupos = grupoRepository.countActiveByPlantel(id);
+        long usuarios = usuarioRepository.countActiveByPlantel(id);
+        if (grupos > 0 || usuarios > 0) {
+            List<String> dependencias = new ArrayList<>();
+            if (grupos > 0) dependencias.add(grupos + " grupo(s) activo(s)");
+            if (usuarios > 0) dependencias.add(usuarios + " usuario(s) activo(s)");
+            throw new IllegalArgumentException(
+                    "No se puede archivar el plantel: tiene " + String.join(" y ", dependencias));
         }
         repository.softDeleteById(id, OffsetDateTime.now());
     }
@@ -127,6 +141,10 @@ public class PlantelService {
         if (request.estado() == null || request.estado().isBlank()) {
             throw new IllegalArgumentException("El estado es obligatorio");
         }
+    }
+
+    private static String orEmpty(String value) {
+        return value != null ? value : "";
     }
 
     private PlantelResponse toResponse(Plantel p) {

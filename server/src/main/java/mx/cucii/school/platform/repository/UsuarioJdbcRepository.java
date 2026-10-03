@@ -187,4 +187,12 @@ public class UsuarioJdbcRepository {
     public void deleteById(Integer id) {
         jdbcTemplate.update("DELETE FROM usuarios WHERE id = ?", id);
     }
+
+    public long countActiveByPlantel(Integer plantelId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM usuarios WHERE plantel_id = ? AND is_active = true",
+                Long.class, plantelId
+        );
+        return count != null ? count : 0;
+    }
 }

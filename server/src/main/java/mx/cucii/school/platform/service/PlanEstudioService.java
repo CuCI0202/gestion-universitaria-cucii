@@ -8,6 +8,7 @@ import mx.cucii.school.platform.dto.PlanEstudioResponse;
 import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.PlanEstudio;
+import mx.cucii.school.platform.repository.GrupoJdbcRepository;
 import mx.cucii.school.platform.repository.PlanEstudioJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class PlanEstudioService {
     private static final Set<String> GRADOS_VALIDOS = Set.of("Licenciatura", "Maestría", "Doctorado");
 
     private final PlanEstudioJdbcRepository repository;
+    private final GrupoJdbcRepository grupoRepository;
 
     public PageResponse<PlanEstudioResponse> findAll(int page, int size, String search,
                                                      String grado, Boolean isActive,
@@ -132,6 +134,12 @@ public class PlanEstudioService {
     public void delete(Integer id) {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException("Plan de estudio no encontrado: " + id);
+        }
+
+        long grupos = grupoRepository.countActiveByPlanEstudio(id);
+        if (grupos > 0) {
+            throw new IllegalArgumentException(
+                    "No se puede archivar la carrera: tiene " + grupos + " grupo(s) activo(s)");
         }
 
         OffsetDateTime now = OffsetDateTime.now();

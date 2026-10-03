@@ -248,4 +248,28 @@ public class ProfesorGrupoJdbcRepository {
                 "UPDATE profesores_grupos SET is_active = false WHERE id = ?", id
         );
     }
+
+    public long countActiveByGrupo(Integer grupoId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM profesores_grupos WHERE grupo_id = ? AND is_active = true",
+                Long.class, grupoId
+        );
+        return count != null ? count : 0;
+    }
+
+    public long countActiveByMateria(Integer materiaId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM profesores_grupos WHERE materia_id = ? AND is_active = true",
+                Long.class, materiaId
+        );
+        return count != null ? count : 0;
+    }
+
+    public long countActiveByUsuario(Integer usuarioId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM profesores_grupos WHERE usuario_id = ? AND is_active = true",
+                Long.class, usuarioId
+        );
+        return count != null ? count : 0;
+    }
 }
