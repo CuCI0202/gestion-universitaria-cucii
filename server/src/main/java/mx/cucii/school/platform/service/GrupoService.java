@@ -10,14 +10,18 @@ import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.Grupo;
 import mx.cucii.school.platform.model.Materia;
 import mx.cucii.school.platform.model.PlanEstudio;
+import mx.cucii.school.platform.repository.AlumnoGrupoJdbcRepository;
+import mx.cucii.school.platform.repository.CalificacionJdbcRepository;
 import mx.cucii.school.platform.repository.GrupoJdbcRepository;
 import mx.cucii.school.platform.repository.MateriaJdbcRepository;
 import mx.cucii.school.platform.repository.PlanEstudioJdbcRepository;
 import mx.cucii.school.platform.repository.PlantelJdbcRepository;
+import mx.cucii.school.platform.repository.ProfesorGrupoJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,6 +32,9 @@ public class GrupoService {
     private final PlanEstudioJdbcRepository planEstudioRepository;
     private final PlantelJdbcRepository plantelRepository;
     private final MateriaJdbcRepository materiaRepository;
+    private final AlumnoGrupoJdbcRepository alumnoGrupoRepository;
+    private final ProfesorGrupoJdbcRepository profesorGrupoRepository;
+    private final CalificacionJdbcRepository calificacionRepository;
 
     public PageResponse<GrupoResponse> findAll(int page, int size, String search,
                                                Integer planEstudioId, Integer plantelId,
@@ -146,6 +153,17 @@ public class GrupoService {
     public void delete(Integer id) {
         if (repository.findById(id).isEmpty()) {
             throw new ResourceNotFoundException("Grupo no encontrado: " + id);
+        }
+        long alumnos = alumnoGrupoRepository.countActiveByGrupo(id);
+        long profesores = profesorGrupoRepository.countActiveByGrupo(id);
+        long calificaciones = calificacionRepository.countActiveByGrupo(id);
+        if (alumnos > 0 || profesores > 0 || calificaciones > 0) {
+            List<String> dependencias = new ArrayList<>();
+            if (alumnos > 0) dependencias.add(alumnos + " alumno(s) asignado(s)");
+            if (profesores > 0) dependencias.add(profesores + " profesor(es) asignado(s)");
+            if (calificaciones > 0) dependencias.add(calificaciones + " calificación(es) registrada(s)");
+            throw new IllegalArgumentException(
+                    "No se puede archivar el grupo: tiene " + String.join(", ", dependencias));
         }
         repository.softDeleteById(id, OffsetDateTime.now());
     }

@@ -164,4 +164,20 @@ public class AlumnoGrupoJdbcRepository {
                 "UPDATE alumnos_grupos SET is_active = false WHERE id = ?", id
         );
     }
+
+    public long countActiveByGrupo(Integer grupoId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM alumnos_grupos WHERE grupo_id = ? AND is_active = true",
+                Long.class, grupoId
+        );
+        return count != null ? count : 0;
+    }
+
+    public long countActiveByAlumno(Integer alumnoId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM alumnos_grupos WHERE alumno_id = ? AND is_active = true",
+                Long.class, alumnoId
+        );
+        return count != null ? count : 0;
+    }
 }

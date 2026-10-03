@@ -182,4 +182,20 @@ public class GrupoJdbcRepository {
                 now, id
         );
     }
+
+    public long countActiveByPlantel(Integer plantelId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM grupos WHERE plantel_id = ? AND is_active = true",
+                Long.class, plantelId
+        );
+        return count != null ? count : 0;
+    }
+
+    public long countActiveByPlanEstudio(Integer planEstudioId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM grupos WHERE plan_estudio_id = ? AND is_active = true",
+                Long.class, planEstudioId
+        );
+        return count != null ? count : 0;
+    }
 }

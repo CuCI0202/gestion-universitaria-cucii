@@ -7,13 +7,16 @@ import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.Materia;
 import mx.cucii.school.platform.model.PlanEstudio;
+import mx.cucii.school.platform.repository.CalificacionJdbcRepository;
 import mx.cucii.school.platform.repository.MateriaJdbcRepository;
 import mx.cucii.school.platform.repository.PlanEstudioJdbcRepository;
+import mx.cucii.school.platform.repository.ProfesorGrupoJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,6 +25,8 @@ public class MateriaService {
 
     private final MateriaJdbcRepository materiaRepository;
     private final PlanEstudioJdbcRepository planEstudioRepository;
+    private final ProfesorGrupoJdbcRepository profesorGrupoRepository;
+    private final CalificacionJdbcRepository calificacionRepository;
 
     public PageResponse<MateriaResponse> findAll(int page, int size, String search,
                                                  Integer planEstudioId, Integer cuatrimestre,
@@ -94,6 +99,15 @@ public class MateriaService {
     public void delete(Integer id) {
         Materia existing = materiaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Materia no encontrada: " + id));
+        long profesores = profesorGrupoRepository.countActiveByMateria(id);
+        long calificaciones = calificacionRepository.countActiveByMateria(id);
+        if (profesores > 0 || calificaciones > 0) {
+            List<String> dependencias = new ArrayList<>();
+            if (profesores > 0) dependencias.add(profesores + " asignación(es) profesor-grupo activa(s)");
+            if (calificaciones > 0) dependencias.add(calificaciones + " calificación(es) registrada(s)");
+            throw new IllegalArgumentException(
+                    "No se puede archivar la materia: tiene " + String.join(" y ", dependencias));
+        }
         materiaRepository.softDeleteById(existing.id(), OffsetDateTime.now());
     }
 

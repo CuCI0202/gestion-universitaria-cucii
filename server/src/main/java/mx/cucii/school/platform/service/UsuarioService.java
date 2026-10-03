@@ -7,6 +7,7 @@ import mx.cucii.school.platform.dto.PageResponse;
 import mx.cucii.school.platform.exception.ResourceNotFoundException;
 import mx.cucii.school.platform.model.Rol;
 import mx.cucii.school.platform.model.Usuario;
+import mx.cucii.school.platform.repository.ProfesorGrupoJdbcRepository;
 import mx.cucii.school.platform.repository.RolJdbcRepository;
 import mx.cucii.school.platform.repository.UsuarioJdbcRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,7 @@ public class UsuarioService {
 
     private final UsuarioJdbcRepository usuarioRepository;
     private final RolJdbcRepository rolRepository;
+    private final ProfesorGrupoJdbcRepository profesorGrupoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public PageResponse<UsuarioResponse> findAll(int page, int size, String search,
@@ -102,6 +104,12 @@ public class UsuarioService {
             throw new ResourceNotFoundException("Usuario no encontrado: " + id);
         }
         if (deactivate) {
+            long asignaciones = profesorGrupoRepository.countActiveByUsuario(id);
+            if (asignaciones > 0) {
+                throw new IllegalArgumentException(
+                        "No se puede archivar el usuario: tiene " + asignaciones
+                                + " asignación(es) profesor-grupo activa(s)");
+            }
             usuarioRepository.softDeleteById(id, OffsetDateTime.now());
         } else {
             usuarioRepository.deleteById(id);
