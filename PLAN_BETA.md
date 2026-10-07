@@ -92,13 +92,13 @@ Código en inglés, texto al usuario en español.
 ### Fase 0 — Higiene base (habilitadores) — COMPLETA (rama `chore/fase-0-hardening`)
 - [x] **0.1** `.gitignore` raíz ampliado (`.env`, `.env.*`, `!.env.example`, `.idea/`, `*.iml`, `.vscode/`, `*.log`). `server/.gitignore` y `view/.gitignore` ya cubrían `target/`, `node_modules/`, `dist/`, `.angular/`.
 - [x] **0.2** Backend configurable por env vars (`DB_URL/DB_USER/DB_PASSWORD/JWT_SECRET/JWT_EXPIRATION/CORS_ORIGINS`) con defaults dev + `application-prod.properties` estricto (falla si faltan). JWT default 24h. `.env.example` en raíz.
-- [x] **0.3** `view/src/environments/environment.prod.ts` (`https://gestion.cucii.mx/api`) + `fileReplacements` en `view/angular.json`. Verificado en build prod.
+- [x] **0.3** `view/src/environments/environment.prod.ts` (`https://api.gestion.cucii.mx`) + `fileReplacements` en `view/angular.json`. Verificado en build prod.
 - [x] **0.4** Cookies `Secure` condicional a HTTPS (`view/src/app/core/services/cookie-utils.ts`).
 - [x] **0.5** Fix `JwtAuthenticationFilter.shouldNotFilter("/auth/login")`.
 - [x] **0.6** CORS desde `app.cors.allowed-origins` (env var, lista separada por comas).
 - [x] **0.7** Renombrar repo a `gestion-universitaria-cucii` y actualizar remoto (`git remote set-url`).
 
-> Nota Fase 2: nginx debe hacer `proxy_pass http://api:8080/;` para `/api/` (strip del prefijo), consistente con `environment.prod.ts`.
+> Nota de arquitectura de despliegue: la **SPA se publica en Cloudflare Pages** y el **VPS solo aloja la DB y el API**. El API se expone en `https://api.gestion.cucii.mx` (Caddy + Let's Encrypt) y el frontend consume ese origen vía `environment.prod.ts`. Ya **no** se usa nginx ni `view/Dockerfile`. La auth viaja en el header `Authorization`, así que no hay cookies cross-site.
 
 ### Fase 1 — Funcionalidad mínima beta
 - [x] **1.1a** Backend búsqueda/filtros/orden server-side en todos los GET paginados (commit `f49d849`). Rutas y params documentados en el historial del commit.
@@ -110,12 +110,13 @@ Código en inglés, texto al usuario en español.
 - [x] **1.6** Gestión global de errores: `NotificationService` + `ToastComponent` (global en App) + `errorInterceptor` que muestra el mensaje del backend en cualquier error (salvo 401); opt-out `SKIP_ERROR_NOTIFICATION`. Backend: mensajes diferenciados para duplicados de alumno archivado + `POST /alumnos/{id}/restore` (botón "Restaurar" y toasts en la pantalla de Alumnos). Base aplicable a toda la plataforma; falta extenderla al resto de pantallas.
 - [x] **1.7** Extender a **Grupos, Materias, Planes de estudio, Planteles y Usuarios**: UX de archivados (toggle "Mostrar archivados" + badge "Archivado — Eliminado" + botón "Restaurar" con endpoint `POST /{recurso}/{id}/restore`) y toasts de éxito en crear/editar/archivar. La **visibilidad de errores ya es global** vía `errorInterceptor`. Backend: `restore` en los 5 servicios/repositorios/controllers; el restore de plan de estudio **cascada** a sus materias. Frontend: `isActive` agregado a modelos `Group/Campus/Program/Subject`, filtro por defecto `{isActive:true}` y `restore()` en los servicios; la pantalla Materias usa `GET /materias?planEstudioId=&isActive=` para poder listar archivadas.
 
-### Fase 2 — Despliegue beta en VPS
+### Fase 2 — Despliegue beta (SPA en Cloudflare Pages · DB + API en VPS)
 - [ ] **2.1** `server/Dockerfile` (multi-stage: Maven → `eclipse-temurin:21-jre`).
-- [ ] **2.2** `view/Dockerfile` (node build → `nginx:alpine`) + `nginx.conf` (SPA fallback, proxy `/api`, gzip).
-- [ ] **2.3** `docker-compose.prod.yaml` raíz: `db` (volumen + healthcheck), `api`, `web`; `.env.example` documentado.
-- [ ] **2.4** HTTPS con Caddy o certbot frente al stack (Let's Encrypt) para `gestion.cucii.mx`.
-- [ ] **2.4.1** Apuntar DNS `gestion.cucii.mx` (A/AAAA) al VPS y emitir el certificado.
+- [ ] **2.2** Frontend en **Cloudflare Pages**: root `view`, build `pnpm install && pnpm build`, output `dist/calificaciones/browser`. Incluye `view/public/_redirects` (`/* /index.html 200`) para el SPA fallback. Sin `view/Dockerfile` ni nginx.
+- [ ] **2.3** `docker-compose.prod.yaml` raíz: `db` (volumen + healthcheck, **sin publicar 5432**) y `api`; `.env.example` documentado. Sin servicio `web`.
+- [ ] **2.4** HTTPS con **Caddy** (Let's Encrypt) en el VPS para `api.gestion.cucii.mx`.
+- [ ] **2.4.1** DNS: `api.gestion.cucii.mx` (A/AAAA) → VPS (Caddy emite cert); `gestion.cucii.mx` → Cloudflare Pages.
+- [ ] **2.4.2** `CORS_ORIGINS=https://gestion.cucii.mx` en el `.env` del API (y preview domains de Pages si aplica).
 - [ ] **2.5** Migraciones: carpeta `database/migrations/` versionadas + script de apply.
 - [ ] **2.6** Backups: cron diario `pg_dump` + `scripts/backup.sh` con retención N días.
 - [ ] **2.7** Primer deploy + smoke test (login).
