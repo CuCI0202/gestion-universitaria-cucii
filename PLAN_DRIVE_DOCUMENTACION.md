@@ -1,7 +1,11 @@
 # Plan: Documentación de alumnos en Google Drive
 
+> **Estado: NO implementado.** Excluido de la beta actual por decisión del
+> usuario. Corresponde al hito **HJ** de `docs/HITOS_PENDIENTES.md` y no bloquea
+> la captura de alumnos ni calificaciones.
+>
 > Documento de planificación. Al aprobarse, se ejecuta fase por fase.
-> Última actualización: 2026-10-03
+> Última actualización: 2026-10-03 (plan); estado actualizado 2026-11-12.
 > Convenciones: `server/AGENTS.md` y `view/AGENTS.md`. Código en inglés, texto al usuario en español.
 
 ---
@@ -26,7 +30,7 @@ de los botones de acción por **iconos** en todo el sistema.
 | Visibilidad humana | Los archivos quedan en la cuenta Gmail real, en la carpeta compartida existente |
 | Tipos de documento | **Catálogo fijo** en BD (`tipos_documento`) |
 | Múltiples por tipo | **Sí** — varios archivos del mismo tipo por alumno, borrado manual |
-| Roles con acceso | **admin + servicios_escolares**: lectura de alumnos + gestión de documentos. CRUD de alumnos sigue siendo solo admin (ver §11) |
+| Roles con acceso | **admin + servicios_escolares**: lectura de alumnos + gestión de documentos. CRUD de alumnos sigue siendo solo admin (ver §11). La beta actual solo tiene operativos `admin` y `docente`; `servicios_escolares` se habilita en el hito HG antes de implementar Drive. |
 | Iconos | **Todo el sistema** — SVGs inline Heroicons encapsulados en componente `app-icon` (sin dependencias nuevas) |
 | Sincronización | **Unidireccional**: la plataforma es el camino de escritura. Archivos agregados manualmente en Drive NO aparecen en la app |
 

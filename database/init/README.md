@@ -24,3 +24,6 @@ calificaciones) **no** se siembran: se capturan desde la aplicación.
 `database/demo/demo_data.sql` contiene 40 alumnos, 4 grupos, 8 docentes y
 calificaciones de ejemplo. Es **solo para desarrollo** y asume una base limpia
 donde se aplicó únicamente `db_structure.sql` (sin ejecutar el bootstrap).
+
+Hitos pendientes (migraciones, CSV, roles, etc.):
+[`../../docs/HITOS_PENDIENTES.md`](../../docs/HITOS_PENDIENTES.md).

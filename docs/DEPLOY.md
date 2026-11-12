@@ -14,6 +14,10 @@ gestion.cucii.mx  ───────────────▶  caddy (80/44
 - El API se expone en `https://api.gestion.cucii.mx`.
 - La autenticación viaja en el header `Authorization: Bearer <token>`.
 
+> **Estado actual:** el kit de despliegue (Hito HA) está implementado y
+> validado localmente. Falta aprovisionar el VPS y crear el DNS de `api`.
+> Hitos pendientes y orden recomendado: [`HITOS_PENDIENTES.md`](HITOS_PENDIENTES.md).
+
 ---
 
 ## 0. Requisitos
@@ -39,6 +43,17 @@ curl -fsSL https://get.docker.com | sh
 usermod -aG docker "$USER"   # vuelve a iniciar sesión después
 docker compose version
 ```
+
+Antes de clonar en el VPS, actualiza `main` desde `develop` en tu máquina:
+
+```bash
+git checkout main
+git merge --no-ff develop
+git push origin main
+```
+
+> `main` está detrás de `develop`. Si no haces este merge, el VPS desplegará una
+> versión sin el kit de despliegue.
 
 Clona el repositorio en el VPS:
 

@@ -6,7 +6,7 @@ Sistema integral de gestión académica para el **Centro Universitario de Cienci
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-%236DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![Angular](https://img.shields.io/badge/Angular-21.2-%23DD0031?logo=angular)](https://angular.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-%234169E1?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](#licencia)
 
 ---
 
@@ -42,7 +42,7 @@ Plataforma que permite registrar alumnos, grupos, planes de estudio, materias y 
 |------|-----------|
 | **Base de datos** | PostgreSQL 18 (Docker) |
 | **Backend** | Java 21 · Spring Boot 4.0.6 · JdbcTemplate · Spring Security 7 · JJWT 0.12.6 · Lombok |
-| **Frontend** | Angular 20.3 · TailwindCSS 4.2 · RxJS 7.8 · TypeScript 5.9 |
+| **Frontend** | Angular 21.2 · TailwindCSS 4.2 · RxJS 7.8 · TypeScript 5.9 |
 | **Build** | Maven (mvnw) · pnpm |
 
 ---
@@ -137,6 +137,7 @@ El backend se configura con variables de entorno (ver `.env.example` para desarr
 
 | Variable | Descripción | Default dev |
 |----------|-------------|-------------|
+| `SPRING_PROFILES_ACTIVE` | Perfil de Spring (`dev` o `prod`) | `dev` |
 | `DB_URL` | URL de conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ss-platform` |
 | `DB_USER` | Usuario de BD | `ssant0` |
 | `DB_PASSWORD` | Contraseña de BD | `2004` |
@@ -199,7 +200,8 @@ volumen vacío.
 
 ## API REST
 
-Base URL: `http://localhost:8080`
+- Desarrollo: `http://localhost:8080`
+- Producción: `https://api.gestion.cucii.mx`
 
 ### Autenticación
 
@@ -207,14 +209,18 @@ Base URL: `http://localhost:8080`
 POST /auth/login
 Content-Type: application/json
 
-{"email": "admin@cucii.edu.mx", "password": "Test1234!"}
+{"email": "admin@cucii.edu.mx", "password": "<ADMIN_PASSWORD>"}
 
 # Response: 200
-# { "token": "eyJ...", "nombre": "Admin", "email": "admin@cucii.edu.mx", "rol": "admin" }
+# { "token": "eyJ...", "id": 1, "nombre": "Administrador", "apellido": "Sistema",
+#   "email": "admin@cucii.edu.mx", "rolId": 1 }
 ```
 
 > [!IMPORTANT]
 > Las rutas protegidas requieren el header `Authorization: Bearer <token>`.
+> `/auth/login` es público; `/auth/me` requiere token.
+> El rol `docente` puede consultar catálogos/alumnos/grupos y registrar o
+> actualizar calificaciones. Los CRUDs administrativos siguen siendo solo `admin`.
 
 ### Endpoints por recurso
 
@@ -272,7 +278,7 @@ El esquema completo está en `database/db_structure.sql`. Tablas principales:
 | `grupos` | Grupos por plan de estudio y plantel |
 | `alumnos_grupos` | Relación alumno ↔ grupo |
 | `roles` | Catálogo de roles del sistema |
-| `usuarios` | Personal con rol asignado y plantel opcional |
+| `usuarios` | Personal con rol asignado y plantel obligatorio |
 | `profesores_grupos` | Asignación profesor ↔ grupo ↔ materia |
 | `calificaciones` | Calificaciones por alumno, materia y grupo |
 
@@ -309,6 +315,8 @@ La guía completa está en [`docs/DEPLOY.md`](docs/DEPLOY.md). Resumen:
 - **Backups:** `scripts/backup.sh` + cron diario.
 - **Base limpia:** catálogos (`roles`, `estatus_alumnos`) + plantel + admin +
   docente. Los datos académicos se capturan desde la app.
+
+Hitos pendientes y orden recomendado: [`docs/HITOS_PENDIENTES.md`](docs/HITOS_PENDIENTES.md).
 
 ---
 

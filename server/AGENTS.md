@@ -267,7 +267,7 @@ public class EntidadJdbcRepository {
 | Método | Ruta | Acción |
 |--------|------|--------|
 | GET | `/calificaciones` | Listar todas (paginado) |
-| GET | `/calificaciones?alumnoId=X` | Calificaciones de un alumno (sin paginación) |
+| GET | `/calificaciones?alumnoId=X` | Calificaciones de un alumno (paginado; el frontend usa `size=100`) |
 | GET | `/calificaciones/{id}` | Obtener por ID |
 | POST | `/calificaciones` | Registrar calificación (201). Rango 0-100. El alumno debe estar asignado al grupo. Unique: alumno+materia+grupo. |
 | PUT | `/calificaciones/{id}` | Actualizar |
@@ -279,7 +279,8 @@ public class EntidadJdbcRepository {
 
 | Método | Ruta | Acción |
 |--------|------|--------|
-| POST | `/auth/login` | Login, devuelve JWT |
+| POST | `/auth/login` | Login, devuelve JWT (público) |
+| GET | `/auth/me` | Datos del usuario autenticado (requiere JWT) |
 
 ## Seguridad y JWT
 
@@ -287,7 +288,7 @@ public class EntidadJdbcRepository {
 - `shouldNotFilter` excluye `/auth/login` para que un token viejo en el header no rompa el login.
 - Los tokens inválidos/expirados se capturan (`JwtException`) y la petición continúa sin autenticar; Spring Security responde 401/403.
 - Roles en DB: `admin`, `rector`, `docente`, `servicios_escolares`, `coordinador`. Spring Security usa `hasRole(...)` (añade prefijo `ROLE_` automáticamente).
-- Token JWT incluye `rol` como claim (minúsculas, sin prefijo).
+- Token JWT incluye `rol` como claim con el `rolId` numérico (1=admin, 2=rector, 3=docente, 4=servicios_escolares, 5=coordinador).
 - `UsuarioDetailsService.loadUserByUsername(email)` se ejecuta en **cada request autenticado** (lo llama `JwtAuthenticationFilter`). Es la consulta más frecuente a la BD.
 - `/auth/me` requiere autenticación; `/auth/login` es público.
 - `SecurityConfig` define un `authenticationEntryPoint` (401 JSON) y un `accessDeniedHandler` (403 JSON).
@@ -304,7 +305,7 @@ public class EntidadJdbcRepository {
 
 ## Paginación
 
-Todos los endpoints GET que retornan listas (`getAll`) están paginados. Los endpoints que retornan una sola entidad (`getById`, `findByAlumnoId`, `getMateriasByCuatrimestre`, etc.) **no** llevan paginación.
+Todos los endpoints GET que retornan listas (`getAll`) están paginados, incluido `GET /calificaciones?alumnoId=X`. Los endpoints que retornan una sola entidad (`getById`) o listas acotadas por diseño (materias de un cuatrimestre) **no** llevan paginación.
 
 ### Parámetros de query
 
@@ -361,7 +362,6 @@ public record PageResponse<T>(
 
 | Ruta | Motivo |
 |------|--------|
-| `GET /calificaciones?alumnoId=X` | Se necesitan todas las calificaciones de un alumno de golpe |
 | `GET /grupos/{id}/cuatrimestres/{n}/materias` | Se necesitan todas las materias de un cuatrimestre de la carrera |
 
 ### Patrón en el service
@@ -431,7 +431,11 @@ security.jwt.expiration=${JWT_EXPIRATION:86400000}   # 24 h
 | `/auth/me` y cualquier otra | JWT válido |
 
 > Beta: no hay restricción por grupo/materia para el docente. La matriz fina de
-> roles queda para post-beta.
+> roles corresponde al hito **HG** de `../docs/HITOS_PENDIENTES.md`.
+>
+> Pendientes de backend: edición/eliminación de calificaciones desde UI,
+> reactivación de asignaciones/calificaciones archivadas, CSV masivo y
+> migraciones versionadas. Ver `../docs/HITOS_PENDIENTES.md`.
 
 ## Rama de migración JdbcTemplate
 
