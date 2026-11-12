@@ -15,7 +15,11 @@
 	<description/>
 	<url/>
 	<licenses>
-		<license/>
+		<license>
+			<name>Proprietary — Internal use only</name>
+			<url>https://gestion.cucii.mx</url>
+			<distribution>manual</distribution>
+		</license>
 	</licenses>
 	<developers>
 		<developer/>

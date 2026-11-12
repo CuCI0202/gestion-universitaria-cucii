@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
+  "license": "UNLICENSED",
   "prettier": {
     "printWidth": 100,
     "singleQuote": true,
