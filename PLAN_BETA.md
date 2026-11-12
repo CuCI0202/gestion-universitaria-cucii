@@ -1,8 +1,8 @@
 # Plan de ejecución hacia Beta v0.1 — Gestión Universitaria CUCII
 
 > Documento de continuidad. Si la sesión se interrumpe, retomar desde aquí.
-> Estado: **Fase 0 + 1.1 + 1.4 + 1.5 + 1.6 + 1.7 completadas** (rama `feat/1.7-archivados-cruds`). Batch CSV movido a Fase 3 (3.4/3.5).
-> Última actualización: 2026-09-30
+> Estado: **Fase 0 + Fase 1 completadas**. Hito A de despliegue (kit Docker/DB/Caddy/backups) implementado y validado localmente; pendiente el VPS y el DNS de `api`. Batch CSV movido a Fase 3 (3.4/3.5).
+> Última actualización: 2026-11-12
 
 ---
 
@@ -111,15 +111,16 @@ Código en inglés, texto al usuario en español.
 - [x] **1.7** Extender a **Grupos, Materias, Planes de estudio, Planteles y Usuarios**: UX de archivados (toggle "Mostrar archivados" + badge "Archivado — Eliminado" + botón "Restaurar" con endpoint `POST /{recurso}/{id}/restore`) y toasts de éxito en crear/editar/archivar. La **visibilidad de errores ya es global** vía `errorInterceptor`. Backend: `restore` en los 5 servicios/repositorios/controllers; el restore de plan de estudio **cascada** a sus materias. Frontend: `isActive` agregado a modelos `Group/Campus/Program/Subject`, filtro por defecto `{isActive:true}` y `restore()` en los servicios; la pantalla Materias usa `GET /materias?planEstudioId=&isActive=` para poder listar archivadas.
 
 ### Fase 2 — Despliegue beta (SPA en Cloudflare Pages · DB + API en VPS)
-- [ ] **2.1** `server/Dockerfile` (multi-stage: Maven → `eclipse-temurin:21-jre`).
-- [ ] **2.2** Frontend en **Cloudflare Pages**: root `view`, build `pnpm install && pnpm build`, output `dist/calificaciones/browser`. Incluye `view/public/_redirects` (`/* /index.html 200`) para el SPA fallback. Sin `view/Dockerfile` ni nginx.
-- [ ] **2.3** `docker-compose.prod.yaml` raíz: `db` (volumen + healthcheck, **sin publicar 5432**) y `api`; `.env.example` documentado. Sin servicio `web`.
-- [ ] **2.4** HTTPS con **Caddy** (Let's Encrypt) en el VPS para `api.gestion.cucii.mx`.
-- [ ] **2.4.1** DNS: `api.gestion.cucii.mx` (A/AAAA) → VPS (Caddy emite cert); `gestion.cucii.mx` → Cloudflare Pages.
-- [ ] **2.4.2** `CORS_ORIGINS=https://gestion.cucii.mx` en el `.env` del API (y preview domains de Pages si aplica).
-- [ ] **2.5** Migraciones: carpeta `database/migrations/` versionadas + script de apply.
-- [ ] **2.6** Backups: cron diario `pg_dump` + `scripts/backup.sh` con retención N días.
-- [ ] **2.7** Primer deploy + smoke test (login).
+- [x] **2.1** `server/Dockerfile` (multi-stage: Maven → `eclipse-temurin:21-jre-alpine`), usuario no-root y healthcheck.
+- [x] **2.2** Frontend en **Cloudflare Pages**: root `view`, build `pnpm install && pnpm build`, output `dist/calificaciones/browser`. Incluye `view/public/_redirects` (`/* /index.html 200`) para el SPA fallback. Sin `view/Dockerfile` ni nginx.
+- [x] **2.3** `docker-compose.prod.yaml` raíz: `db` (volumen + healthcheck, **sin publicar 5432**), `api` y `caddy`; `deploy/.env.prod.example` documentado. Sin servicio `web`.
+- [x] **2.4** HTTPS con **Caddy como servicio Docker** (`caddy:2-alpine`) y `deploy/Caddyfile` para `api.gestion.cucii.mx`.
+- [ ] **2.4.1** DNS: `api.gestion.cucii.mx` (A/AAAA) → VPS (Caddy emite cert); `gestion.cucii.mx` → Cloudflare Pages. **Pendiente: VPS.**
+- [x] **2.4.2** `CORS_ORIGINS=https://gestion.cucii.mx` en `.env.prod` (y preview domains de Pages si aplica).
+- [ ] **2.5** Migraciones: carpeta `database/migrations/` versionadas + script de apply. La init limpia ya está, pero falta el mecanismo incremental.
+- [x] **2.6** Backups: `scripts/backup.sh` con `pg_dump`, validación y retención; cron documentado.
+- [ ] **2.7** Primer deploy + smoke test en VPS. Validado localmente con Docker: login admin/docente, CRUDs y calificación.
+- [x] **2.8** Base limpia: `db_structure.sql` (esquema + catálogos) + `database/init/02_bootstrap.sh` (plantel, admin, docente). Datos demo movidos a `database/demo/demo_data.sql`.
 
 ### Fase 3 — Carga de datos reales + congelar beta
 - [ ] **3.1** Orden de captura: planteles → planes de estudio → materias → estatus → grupos → alumnos (manual/CSV) → asignaciones alumno-grupo → calificaciones (manual/CSV).

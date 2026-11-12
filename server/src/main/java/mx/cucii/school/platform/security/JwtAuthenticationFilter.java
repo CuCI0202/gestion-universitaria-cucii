@@ -1,5 +1,6 @@
 package mx.cucii.school.platform.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,15 +41,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         String token = authHeader.substring(7);
-        String email = jwtService.extractEmail(token);
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            var userDetails = usuarioDetailsService.loadUserByUsername(email);
-            if (jwtService.isTokenValid(token, email)) {
-                var auth = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+        try {
+            String email = jwtService.extractEmail(token);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userDetails = usuarioDetailsService.loadUserByUsername(email);
+                if (jwtService.isTokenValid(token, email)) {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
             }
+        } catch (JwtException | IllegalArgumentException ex) {
+            // Token inválido o expirado: se continúa sin autenticar y Spring
+            // Security responde 401/403 según la ruta.
+            SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);
     }

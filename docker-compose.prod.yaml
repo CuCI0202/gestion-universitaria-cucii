@@ -1,0 +1,99 @@
+name: gestion-cucii
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:18
+    container_name: gestion-cucii-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB en .env.prod}
+      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER en .env.prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env.prod}
+      # Bootstrap: solo se ejecuta con un volumen vacío.
+      PLANTEL_NOMBRE: ${PLANTEL_NOMBRE:-CUCII}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?define ADMIN_EMAIL en .env.prod}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?define ADMIN_PASSWORD en .env.prod}
+      TEACHER_EMAIL: ${TEACHER_EMAIL:?define TEACHER_EMAIL en .env.prod}
+      TEACHER_PASSWORD: ${TEACHER_PASSWORD:?define TEACHER_PASSWORD en .env.prod}
+      TZ: ${TZ:-America/Mexico_City}
+    volumes:
+      - db_data:/var/lib/postgresql
+      - ./database/db_structure.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/init/02_bootstrap.sh:/docker-entrypoint-initdb.d/02_bootstrap.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - internal
+    logging: *default-logging
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: gestion-cucii-api:latest
+    container_name: gestion-cucii-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:?define POSTGRES_DB en .env.prod}
+      DB_USER: ${POSTGRES_USER:?define POSTGRES_USER en .env.prod}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env.prod}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en .env.prod}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      CORS_ORIGINS: ${CORS_ORIGINS:?define CORS_ORIGINS en .env.prod}
+      TZ: ${TZ:-America/Mexico_City}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    expose:
+      - "8080"
+    networks:
+      - internal
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gestion-cucii-caddy
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?define API_DOMAIN en .env.prod}
+      ACME_EMAIL: ${ACME_EMAIL:?define ACME_EMAIL en .env.prod}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+    logging: *default-logging
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
