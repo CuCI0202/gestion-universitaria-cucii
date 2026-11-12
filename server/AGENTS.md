@@ -284,13 +284,18 @@ public class EntidadJdbcRepository {
 ## Seguridad y JWT
 
 - `JwtAuthenticationFilter` extiende `OncePerRequestFilter`. Procesa el header `Authorization: Bearer <token>`.
-- **No tiene `shouldNotFilter`** (no se excluye `/auth/**` del filtro JWT). Si hay un token expirado en el header al hacer login, `jwtService.extractEmail()` lanza `ExpiredJwtException` y da 403 — el login nunca llega al controller.
-- Roles en DB: `admin`, `rector`, `docente`, `servicios_escolares`, `coordinador`. Spring Security usa `.hasRole("ADMIN")` (añade prefijo `ROLE_` automáticamente).
+- `shouldNotFilter` excluye `/auth/login` para que un token viejo en el header no rompa el login.
+- Los tokens inválidos/expirados se capturan (`JwtException`) y la petición continúa sin autenticar; Spring Security responde 401/403.
+- Roles en DB: `admin`, `rector`, `docente`, `servicios_escolares`, `coordinador`. Spring Security usa `hasRole(...)` (añade prefijo `ROLE_` automáticamente).
 - Token JWT incluye `rol` como claim (minúsculas, sin prefijo).
 - `UsuarioDetailsService.loadUserByUsername(email)` se ejecuta en **cada request autenticado** (lo llama `JwtAuthenticationFilter`). Es la consulta más frecuente a la BD.
+- `/auth/me` requiere autenticación; `/auth/login` es público.
+- `SecurityConfig` define un `authenticationEntryPoint` (401 JSON) y un `accessDeniedHandler` (403 JSON).
 
 ### CORS
-- Origen: `http://localhost:4200`, métodos: GET/POST/PUT/DELETE/OPTIONS, `allowCredentials = true`
+- Origen configurable con `CORS_ORIGINS` (lista separada por comas; default `http://localhost:4200`).
+- Métodos: GET/POST/PUT/DELETE/OPTIONS, `allowCredentials = true`.
+- En producción usa coincidencia exacta: `https://gestion.cucii.mx`.
 
 ## Manejo de errores
 
@@ -396,34 +401,37 @@ public ResponseEntity<PageResponse<XxxResponse>> getAll(
 
 ## Base de datos
 
-- Puerto 5432, usuario `ssant0`, DB `ss-platform`, password `2004`
-- Esquema completo: `../database/db_structure.sql`
-- Seed data con passwords bcrypt en `application.properties`. **La contraseña de prueba es `Test1234!`** (no `1234` como aparece en los mocks del frontend).
-- Email del admin: `admin@cucii.edu.mx`
+- Desarrollo: puerto 5432, usuario `ssant0`, DB `ss-platform`, password `2004` (ver `database/docker-compose.yaml`).
+- Esquema + catálogos: `../database/db_structure.sql`.
+- Bootstrap de producción: `../database/init/02_bootstrap.sh` (admin + docente desde variables de entorno).
+- Datos demo opcionales: `../database/demo/demo_data.sql`.
+- En producción el perfil `prod` exige `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` y `CORS_ORIGINS`.
 
 ## Config (`src/main/resources/application.properties`)
 
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/ss-platform
-security.jwt.secret=cucii-platform-super-secret-key-change-in-production-2024
-security.jwt.expiration=8640000000   # 100 días (dev)
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/ss-platform}
+spring.datasource.username=${DB_USER:ssant0}
+spring.datasource.password=${DB_PASSWORD:2004}
+security.jwt.secret=${JWT_SECRET:...}
+security.jwt.expiration=${JWT_EXPIRATION:86400000}   # 24 h
 ```
 
 ## Rutas actuales en SecurityConfig
 
 | Patrón | Acceso |
 |--------|--------|
-| `/auth/**` | público |
-| `/usuarios/**` | `ADMIN` |
-| `/planes-estudio/**` | `ADMIN` |
-| `/materias/**` | `ADMIN` |
-| `/planteles/**` | `ADMIN` |
-| `/alumnos/**` | `ADMIN` |
-| `/grupos/**` | `ADMIN` |
-| `/alumnos-grupos/**` | `ADMIN` |
-| `/profesores-grupos/**` | `ADMIN` |
-| `/calificaciones/**` | `ADMIN` |
-| cualquier otra | JWT válido |
+| `/actuator/health` | público |
+| `/auth/login` | público |
+| `/swagger-ui/**`, `/v3/**` | público |
+| GET `/planes-estudio/**`, `/materias/**`, `/planteles/**`, `/alumnos/**`, `/grupos/**`, `/alumnos-grupos/**`, `/profesores-grupos/**` | `ADMIN`, `DOCENTE` |
+| GET/POST/PUT `/calificaciones/**` | `ADMIN`, `DOCENTE` |
+| DELETE `/calificaciones/**` | `ADMIN` |
+| `/usuarios/**` y escrituras de catálogos/CRUDs | `ADMIN` |
+| `/auth/me` y cualquier otra | JWT válido |
+
+> Beta: no hay restricción por grupo/materia para el docente. La matriz fina de
+> roles queda para post-beta.
 
 ## Rama de migración JdbcTemplate
 

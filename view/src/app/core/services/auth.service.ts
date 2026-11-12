@@ -98,7 +98,9 @@ export class AuthService {
   }
 
   isAdmin(): boolean {
+    // Beta: solo admin accede a los CRUDs administrativos. El rol rector se
+    // habilitará cuando exista la matriz de permisos en el backend.
     const role = this.currentUser()?.rol ?? this._cachedRole();
-    return role === 'admin' || role === 'rector';
+    return role === 'admin';
   }
 }

@@ -1,18 +1,28 @@
-
 services:
   db:
     container_name: cucii-ss-platform
     image: postgres:18
     ports:
-      - 5432:5432
+      - "5432:5432"
     environment:
-      - POSTGRES_PASSWORD=2004
-      - POSTGRES_USER=ssant0
-      - POSTGRES_DB=ss-platform
+      POSTGRES_DB: ${POSTGRES_DB:-ss-platform}
+      POSTGRES_USER: ${POSTGRES_USER:-ssant0}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-2004}
+      # Bootstrap de desarrollo (solo aplica con un volumen vacío).
+      PLANTEL_NOMBRE: ${PLANTEL_NOMBRE:-CUCII}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cucii.edu.mx}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!Dev}
+      TEACHER_EMAIL: ${TEACHER_EMAIL:-docente@cucii.edu.mx}
+      TEACHER_PASSWORD: ${TEACHER_PASSWORD:-Docente1234!Dev}
     volumes:
       - ss-platform-data:/var/lib/postgresql
-      - ./db_structure.sql:/docker-entrypoint-initdb.d/init.sql
-
+      - ./db_structure.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./init/02_bootstrap.sh:/docker-entrypoint-initdb.d/02_bootstrap.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   ss-platform-data:

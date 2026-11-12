@@ -5,6 +5,11 @@
 .env
 .env.*
 !.env.example
+!deploy/.env.prod.example
+
+# Backups / dumps
+backups/
+*.dump
 
 # IDE
 .idea/

@@ -1,11 +1,13 @@
 package mx.cucii.school.platform.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import mx.cucii.school.platform.security.JwtAuthenticationFilter;
 import mx.cucii.school.platform.service.UsuarioDetailsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -42,19 +44,52 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"No autenticado\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"No tienes permisos para realizar esta acción\"}");
+                        })
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/v3/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/usuarios/**").hasRole("ADMIN")
-                        .requestMatchers("/planes-estudio/**").hasRole("ADMIN")
-                        .requestMatchers("/materias/**").hasRole("ADMIN")
-                        .requestMatchers("/planteles/**").hasRole("ADMIN")
-                        .requestMatchers("/alumnos/**").hasRole("ADMIN")
-                        .requestMatchers("/grupos/**").hasRole("ADMIN")
-                        .requestMatchers("/alumnos-grupos/**").hasRole("ADMIN")
-                        .requestMatchers("/profesores-grupos/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/**").permitAll()
+                        .requestMatchers("/auth/login").permitAll()
+
+                        // Beta admin + docente: lectura compartida de catálogos,
+                        // alumnos, grupos y asignaciones.
+                        .requestMatchers(HttpMethod.GET,
+                                "/planes-estudio/**",
+                                "/materias/**",
+                                "/planteles/**",
+                                "/alumnos/**",
+                                "/grupos/**",
+                                "/alumnos-grupos/**",
+                                "/profesores-grupos/**").hasAnyRole("ADMIN", "DOCENTE")
+
+                        // Calificaciones: el docente puede consultar, registrar y
+                        // actualizar; eliminar queda reservado al admin.
+                        .requestMatchers(HttpMethod.GET, "/calificaciones/**").hasAnyRole("ADMIN", "DOCENTE")
+                        .requestMatchers(HttpMethod.POST, "/calificaciones/**").hasAnyRole("ADMIN", "DOCENTE")
+                        .requestMatchers(HttpMethod.PUT, "/calificaciones/**").hasAnyRole("ADMIN", "DOCENTE")
                         .requestMatchers("/calificaciones/**").hasRole("ADMIN")
+
+                        // CRUDs administrativos: solo admin.
+                        .requestMatchers(
+                                "/usuarios/**",
+                                "/planes-estudio/**",
+                                "/materias/**",
+                                "/planteles/**",
+                                "/alumnos/**",
+                                "/grupos/**",
+                                "/alumnos-grupos/**",
+                                "/profesores-grupos/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

@@ -1,10 +1,10 @@
-# 📊 Plataforma de Calificaciones CUCII
+# 🎓 Gestión Universitaria CUCII
 
 Sistema integral de gestión académica para el **Centro Universitario de Ciencias de la Información (CUCII)**.
 
 [![Java](https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-%236DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
-[![Angular](https://img.shields.io/badge/Angular-20.3-%23DD0031?logo=angular)](https://angular.dev/)
+[![Angular](https://img.shields.io/badge/Angular-21.2-%23DD0031?logo=angular)](https://angular.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-%234169E1?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -50,20 +50,28 @@ Plataforma que permite registrar alumnos, grupos, planes de estudio, materias y 
 ## Estructura del Repositorio
 
 ```
-calificaciones.cucii.mx/
+gestion-universitaria-cucii/
 ├── database/               # PostgreSQL — esquema + Docker Compose
-│   ├── db_structure.sql    # Definición completa de tablas + seed data
-│   ├── docker-compose.yaml # Contenedor PostgreSQL 18
+│   ├── db_structure.sql    # Esquema + catálogos base (roles, estatus)
+│   ├── init/               # Bootstrap de producción (admin/docente)
+│   ├── demo/               # Datos demo opcionales para desarrollo
+│   ├── docker-compose.yaml # Contenedor PostgreSQL 18 (desarrollo)
 │   └── dbdoc/              # Documentación visual generada con tbls
+├── deploy/                 # Caddyfile y plantilla .env.prod
+├── docs/DEPLOY.md          # Guía de despliegue paso a paso
+├── scripts/backup.sh       # Respaldo diario de PostgreSQL
 ├── server/                 # API REST — Spring Boot (Java 21)
 │   ├── src/                # Código fuente
+│   ├── Dockerfile          # Imagen de producción del API
 │   ├── pom.xml             # Dependencias Maven
 │   └── README.md           # Documentación detallada del backend
-└── view/                   # SPA — Angular 20
+└── view/                   # SPA — Angular 21
     ├── src/                # Componentes, servicios, rutas
     ├── angular.json        # Configuración de Angular
     └── README.md           # Documentación detallada del frontend
 ```
+
+> Guía de despliegue: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
@@ -88,7 +96,7 @@ calificaciones.cucii.mx/
 
 ```bash
 git clone <repo-url>
-cd calificaciones.cucii.mx
+cd gestion-universitaria-cucii
 ```
 
 ### 2. Iniciar base de datos
@@ -98,7 +106,9 @@ cd database
 docker compose up -d
 ```
 
-El contenedor `cucii-ss-platform` expone PostgreSQL en `localhost:5432`. Al iniciar por primera vez ejecuta `db_structure.sql` automáticamente (tablas + datos de prueba).
+El contenedor `cucii-ss-platform` expone PostgreSQL en `localhost:5432`. Al iniciar por primera vez ejecuta `db_structure.sql` (esquema + catálogos) y `database/init/02_bootstrap.sh` (plantel base, administrador y usuario docente).
+
+Si quieres datos demo para desarrollo, con un volumen limpio ejecuta además `database/demo/demo_data.sql` (sin el bootstrap).
 
 ### 3. Iniciar backend
 
@@ -123,18 +133,19 @@ El frontend se sirve en `http://localhost:4200`.
 
 ## Variables de Entorno
 
-El backend se configura en `server/src/main/resources/application.properties`:
+El backend se configura con variables de entorno (ver `.env.example` para desarrollo y `deploy/.env.prod.example` para producción):
 
-| Variable | Descripción | Default | Requerido |
-|----------|-------------|---------|-----------|
-| `spring.datasource.url` | URL de conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ss-platform` | Sí |
-| `spring.datasource.username` | Usuario de BD | `ssant0` | Sí |
-| `spring.datasource.password` | Contraseña de BD | `2004` | Sí |
-| `security.jwt.secret` | Clave secreta para firmar JWT | `cucii-platform-super-secret-key-...` | Sí |
-| `security.jwt.expiration` | Tiempo de expiración del token (ms) | `8640000000` (100 días) | Sí |
+| Variable | Descripción | Default dev |
+|----------|-------------|-------------|
+| `DB_URL` | URL de conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ss-platform` |
+| `DB_USER` | Usuario de BD | `ssant0` |
+| `DB_PASSWORD` | Contraseña de BD | `2004` |
+| `JWT_SECRET` | Clave secreta para firmar JWT | valor de desarrollo |
+| `JWT_EXPIRATION` | Expiración del token (ms) | `86400000` (24 h) |
+| `CORS_ORIGINS` | Orígenes del frontend separados por coma | `http://localhost:4200` |
 
 > [!WARNING]
-> La clave JWT en `application.properties` es para desarrollo. En producción debe cambiarse por una clave segura y gestionarse como secreto de entorno.
+> En producción usa `SPRING_PROFILES_ACTIVE=prod`; el perfil estricto falla si falta alguna variable. Nunca reutilices los valores de desarrollo.
 
 ---
 
@@ -171,12 +182,18 @@ docker compose down               # Detener contenedor
 tbls doc                          # Regenerar documentación de BD
 ```
 
-### Credenciales de prueba
+### Credenciales de desarrollo
+
+Las define `database/docker-compose.yaml` (o tu `.env`):
 
 ```
-Email:    admin@cucii.edu.mx
-Password: Test1234!
+Admin:    admin@cucii.edu.mx   / Admin1234!Dev
+Docente:  docente@cucii.edu.mx / Docente1234!Dev
 ```
+
+En producción se definen con `ADMIN_EMAIL`/`ADMIN_PASSWORD` y
+`TEACHER_EMAIL`/`TEACHER_PASSWORD` en `.env.prod`, y se crean solo con el
+volumen vacío.
 
 ---
 
@@ -217,11 +234,11 @@ Content-Type: application/json
 
 | Método | Ruta | Descripción | Acceso |
 |--------|------|-------------|--------|
-| GET | `/planes-estudio/{id}/con-materias` | Plan + materias activas (LEFT JOIN) | ADMIN |
-| GET | `/planes-estudio/{id}/con-materias-sql` | Alias del anterior | ADMIN |
-| GET | `/grupos/{id}/alumnos` | Alumnos asignados al grupo (paginado, `?search=`) | ADMIN |
-| GET | `/grupos/{id}/alumnos-disponibles` | Alumnos no asignados al grupo (paginado, `?search=`) | ADMIN |
-| GET | `/profesores-grupos` | Asignaciones con nombres de profesor/grupo/materia (paginado, `?search=`) | ADMIN |
+| GET | `/planes-estudio/{id}/con-materias` | Plan + materias activas (LEFT JOIN) | ADMIN, DOCENTE |
+| GET | `/planes-estudio/{id}/con-materias-sql` | Alias del anterior | ADMIN, DOCENTE |
+| GET | `/grupos/{id}/alumnos` | Alumnos asignados al grupo (paginado, `?search=`) | ADMIN, DOCENTE |
+| GET | `/grupos/{id}/alumnos-disponibles` | Alumnos no asignados al grupo (paginado, `?search=`) | ADMIN, DOCENTE |
+| GET | `/profesores-grupos` | Asignaciones con nombres de profesor/grupo/materia (paginado, `?search=`) | ADMIN, DOCENTE |
 | DELETE | `/usuarios/{id}?deactivate=true` | Soft-delete | ADMIN |
 | DELETE | `/usuarios/{id}?deactivate=false` | Hard-delete | ADMIN |
 
@@ -229,13 +246,16 @@ Content-Type: application/json
 
 ## Roles del Sistema
 
-| Rol | Descripción |
-|-----|-------------|
-| `admin` | Acceso total al sistema |
-| `rector` | Rector del plantel |
-| `docente` | Profesor — puede registrar calificaciones |
-| `servicios_escolares` | Responsable de servicios escolares |
-| `coordinador` | Gestión de grupos y alumnos |
+| Rol | Descripción | Estado beta |
+|-----|-------------|-------------|
+| `admin` | Acceso total al sistema | Activo |
+| `docente` | Consulta catálogos/alumnos/grupos y registra calificaciones | Activo |
+| `rector` | Rector del plantel | Pendiente (matriz de permisos) |
+| `servicios_escolares` | Responsable de servicios escolares | Pendiente |
+| `coordinador` | Gestión de grupos y alumnos | Pendiente |
+
+> En esta beta solo `admin` accede a los CRUDs administrativos. El `docente`
+> puede consultar y registrar/actualizar calificaciones, pero no eliminarlas.
 
 ---
 
@@ -266,13 +286,29 @@ Documentación visual (diagramas ER) en `database/dbdoc/` generada con [tbls](ht
 |------|--------|-------------|
 | `/login` | Público | Inicio de sesión |
 | `/browse` | Autenticado | Consulta de alumnos y calificaciones por cuatrimestre |
-| `/upload` | Autenticado | Registro manual o por CSV de calificaciones |
+| `/upload` | Autenticado | Registro manual de calificaciones (CSV en la siguiente iteración) |
 | `/students` | Admin | CRUD de alumnos |
+| `/profesores` | Admin | Asignación profesor ↔ grupo ↔ materia |
 | `/groups` | Admin | CRUD de grupos |
 | `/programs` | Admin | CRUD de planes de estudio |
 | `/subjects` | Admin | CRUD de materias por plan |
 | `/campuses` | Admin | CRUD de planteles |
 | `/users` | Admin | CRUD de usuarios del sistema |
+
+---
+
+## Despliegue
+
+La guía completa está en [`docs/DEPLOY.md`](docs/DEPLOY.md). Resumen:
+
+- **Frontend:** Cloudflare Pages (root `view`, build `pnpm install && pnpm build`,
+  output `dist/calificaciones/browser`).
+- **Backend + DB + HTTPS:** VPS con Docker Compose (`docker-compose.prod.yaml`)
+  y Caddy como servicio Docker.
+- **Variables:** `cp deploy/.env.prod.example .env.prod` y completar secretos.
+- **Backups:** `scripts/backup.sh` + cron diario.
+- **Base limpia:** catálogos (`roles`, `estatus_alumnos`) + plantel + admin +
+  docente. Los datos académicos se capturan desde la app.
 
 ---
 
