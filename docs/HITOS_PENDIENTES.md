@@ -21,6 +21,10 @@
 `api.gestion.cucii.mx`. Sin eso no se puede ejecutar el primer despliegue real,
 aunque el kit ya está probado en local.
 
+**Licencia:** software privativo, interno y confidencial de CUCII. Todos los
+derechos reservados; ver `LICENSE` en la raíz del repositorio. El repositorio es
+privado y no se distribuye como software de código abierto.
+
 > `main` sigue detrás de `develop`. Antes de desplegar hay que hacer el merge
 > `develop → main` y desplegar desde `main`.
 
@@ -364,7 +368,6 @@ HB, HE y HC. HD puede hacerse con la primera carga o antes de la segunda.
 | Roles | Alcance de rector, coordinador y servicios escolares |
 | Ciclos | ¿Un ciclo por año/cuatrimestre? ¿Se requiere historial desde la primera carga? |
 | Drive | Cuenta de Google, carpeta raíz y responsable del refresh token |
-| Licencia | El README menciona MIT pero no existe archivo `LICENSE`; definir titular y añadirlo o retirar la mención |
 
 ---
 

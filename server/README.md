@@ -5,7 +5,7 @@ Backend de la plataforma de gestión académica CUCII. API REST construida con S
 [![Java](https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-%236DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-%234169E1?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue)](../README.md#licencia)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](../LICENSE)
 
 ---
 

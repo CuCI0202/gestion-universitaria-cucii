@@ -6,7 +6,7 @@ Sistema integral de gestión académica para el **Centro Universitario de Cienci
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-%236DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![Angular](https://img.shields.io/badge/Angular-21.2-%23DD0031?logo=angular)](https://angular.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-%234169E1?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue)](#licencia)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 
 ---
 
@@ -352,4 +352,8 @@ chore: remove unused Spring Data JDBC repositories
 
 ## Licencia
 
-MIT
+**Software privativo y confidencial de CUCII. Todos los derechos reservados.**
+
+Este repositorio es de uso interno. No se concede licencia para copiar,
+modificar, distribuir ni utilizar el software fuera de CUCII sin autorización
+previa y por escrito. Ver [`LICENSE`](LICENSE).

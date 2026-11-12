@@ -81,3 +81,8 @@ El build de producción reemplaza `environment.ts` por `environment.prod.ts`
 - Editar/eliminar calificaciones desde la UI (hito HC).
 - Catálogos de selects limitados a 100 registros; migrar a typeahead cuando
   crezcan.
+
+## Licencia
+
+Software privativo, interno y confidencial de CUCII. Todos los derechos
+reservados. Ver [`../LICENSE`](../LICENSE).
