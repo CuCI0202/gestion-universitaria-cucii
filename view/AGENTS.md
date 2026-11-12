@@ -2,11 +2,11 @@
 
 ## Stack
 
-- **Angular 20.3.0** — zoneless (`provideZonelessChangeDetection`), standalone components, lazy-loaded routes
+- **Angular 21.2.17** — zoneless (`provideZonelessChangeDetection`), standalone components, lazy-loaded routes
 - **TailwindCSS 4.2.1** — configurado vía `src/styles.css` con `@import "tailwindcss"`
 - **TypeScript 5.9**, **RxJS 7.8**
 - Sin NgRx ni librerías de estado externas — estado reactivo con **Angular Signals**
-- Backend: Spring Boot, PostgreSQL. API definida en `docs/api-docs.json`
+- Backend: Spring Boot, PostgreSQL. API generada en `docs/api-docs.json` (regenerar desde `/v3/api-docs` cuando cambien los endpoints).
 
 ## Convenciones de idioma
 
@@ -15,15 +15,16 @@
 
 ## Roles (rolId mapeado en `auth.model.ts`)
 
-| ID | Rol | Acceso |
-|----|-----|--------|
+| ID | Rol | Acceso beta |
+|----|-----|-------------|
 | 1 | `admin` | Total (sidebar completo) |
-| 2 | `rector` | Total (sidebar completo) |
-| 3 | `docente` | Básico (browse + upload) |
-| 4 | `servicios_escolares` | Sin detalle aún |
-| 5 | `coordinador` | Sin detalle aún |
+| 2 | `rector` | Sin acceso administrativo hasta implementar la matriz (hito HG) |
+| 3 | `docente` | Básico (browse + upload; consulta y registra calificaciones) |
+| 4 | `servicios_escolares` | Sin acceso hasta el hito HG |
+| 5 | `coordinador` | Sin acceso hasta el hito HG |
 
-`AuthService.isAdmin()` retorna `true` para `admin` y `rector`.
+`AuthService.isAdmin()` retorna `true` **solo** para `admin`. El backend exige
+`ADMIN` en los CRUDs administrativos.
 
 ## Autenticación
 
@@ -150,6 +151,10 @@ Los métodos retornan `Observable<T>` con HTTP real, no `of()` mock.
 
 - Los servicios son singletons: aplicar filtros en una pantalla deja el signal filtrado hasta que otra pantalla lo recargue.
 - Catálogos en selects (planes, planteles, grupos, docentes) se cargan completos con `size=100` (`getCatalog()` / `getAll()` / `getTeachers()`). Si un catálogo supera 100 registros habrá que migrarlo a typeahead server-side.
+- **HC:** no hay UI para editar/eliminar calificaciones (`GradesService.update/delete` existen sin uso).
+- **HD:** `/upload` solo permite captura manual; falta importación CSV de alumnos y calificaciones.
+- **HG:** la UI del docente aún no se limita a sus grupos/materias.
+- Ver `../docs/HITOS_PENDIENTES.md` para el detalle y orden.
 
 ## Flujo Profesores (`/profesores`)
 

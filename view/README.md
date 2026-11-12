@@ -1,59 +1,83 @@
-# Calificaciones
+# Gestión Universitaria CUCII — Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.2.
+SPA en Angular para la gestión académica del CUCII: alumnos, grupos, planes de
+estudio, materias, planteles, usuarios y calificaciones.
 
-## Development server
+## Stack
 
-To start a local development server, run:
+| Tecnología | Versión |
+|------------|---------|
+| Angular | 21.2 |
+| TypeScript | 5.9 |
+| TailwindCSS | 4.2 |
+| RxJS | 7.8 |
+| Gestión de estado | Angular Signals (sin NgRx) |
 
-```bash
-ng serve
-```
+La app es **zoneless**, usa componentes standalone y rutas lazy-loaded.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Requisitos
 
-## Code scaffolding
+- Node.js 20.19+ / 22.12+ / 24+
+- pnpm 9+
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+## Desarrollo
 
 ```bash
-ng build
+pnpm install
+pnpm start
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+La app queda en `http://localhost:4200` y consume el API de
+`http://localhost:8080` (`src/environments/environment.ts`).
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Build de producción
 
 ```bash
-ng test
+pnpm build
 ```
 
-## Running end-to-end tests
+Salida: `dist/calificaciones/browser`.
 
-For end-to-end (e2e) testing, run:
+El build de producción reemplaza `environment.ts` por `environment.prod.ts`
+(`https://api.gestion.cucii.mx`) mediante `fileReplacements` en `angular.json`.
 
-```bash
-ng e2e
-```
+## Rutas
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+| Ruta | Acceso | Descripción |
+|------|--------|-------------|
+| `/login` | Público | Inicio de sesión |
+| `/browse` | Autenticado | Consulta de alumnos y calificaciones |
+| `/upload` | Autenticado | Registro manual de calificaciones |
+| `/students` | Admin | CRUD de alumnos |
+| `/profesores` | Admin | Asignación profesor ↔ grupo ↔ materia |
+| `/groups` | Admin | CRUD de grupos |
+| `/programs` | Admin | CRUD de planes de estudio |
+| `/subjects` | Admin | CRUD de materias |
+| `/campuses` | Admin | CRUD de planteles |
+| `/users` | Admin | CRUD de usuarios |
+| `/groups/:id/students` | Admin | Alumnos del grupo |
 
-## Additional Resources
+## Autenticación
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- El token JWT se guarda en la cookie `auth_token` (SameSite=Lax, `Secure` solo
+  sobre HTTPS, 24 h).
+- `auth_role` guarda el `rolId` para restaurar el rol mientras `/auth/me`
+  resuelve.
+- El interceptor agrega `Authorization: Bearer <token>` y hace logout +
+  redirect a `/login` ante un `401`.
+- `adminGuard` restringe las pantallas administrativas a `admin`.
+- El rol `docente` accede a `/browse` y `/upload`; los CRUDs quedan para admin.
+
+## Documentación relacionada
+
+- Convenciones del frontend: [`AGENTS.md`](./AGENTS.md)
+- API REST: `server/README.md` y `docs/api-docs.json`
+- Despliegue en Cloudflare Pages: [`../docs/DEPLOY.md`](../docs/DEPLOY.md)
+- Hitos pendientes: [`../docs/HITOS_PENDIENTES.md`](../docs/HITOS_PENDIENTES.md)
+
+## Pendientes de frontend
+
+- Importación CSV de alumnos y calificaciones (hito HD).
+- Editar/eliminar calificaciones desde la UI (hito HC).
+- Catálogos de selects limitados a 100 registros; migrar a typeahead cuando
+  crezcan.

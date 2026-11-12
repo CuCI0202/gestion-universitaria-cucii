@@ -1,5 +1,9 @@
 # ss-platform
 
+> Documentación visual generada con [tbls](https://github.com/k1LoW/tbls) desde
+> la base de datos de desarrollo. Regenerar con `tbls doc` cuando cambie el
+> esquema. No contiene datos de la aplicación.
+
 ## Tables
 
 | Name | Columns | Comment | Type |

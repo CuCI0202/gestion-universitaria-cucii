@@ -1,11 +1,11 @@
-# 📡 CUCII Calificaciones — API REST
+# 📡 Gestión Universitaria CUCII — API REST
 
 Backend de la plataforma de gestión académica CUCII. API REST construida con Spring Boot y JdbcTemplate, con autenticación stateless JWT.
 
 [![Java](https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-%236DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-%234169E1?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](../README.md#licencia)
 
 ---
 
@@ -83,10 +83,10 @@ cd database && docker compose up -d
 # 2. Iniciar servidor
 ./mvnw spring-boot:run
 
-# 3. Probar autenticación
+# 3. Probar autenticación (credenciales de desarrollo)
 curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@cucii.edu.mx","password":"Test1234!"}'
+  -d '{"email":"admin@cucii.edu.mx","password":"Admin1234!Dev"}'
 ```
 
 ### Base de datos
@@ -98,16 +98,25 @@ curl -X POST http://localhost:8080/auth/login \
 | Usuario | `ssant0` |
 | Contraseña | `2004` |
 
-El esquema se inicializa automáticamente desde `../database/db_structure.sql`.
+Al crear el volumen por primera vez, PostgreSQL ejecuta `../database/db_structure.sql`
+(esquema + catálogos) y `../database/init/02_bootstrap.sh` (plantel base, admin y
+docente). Los datos demo opcionales están en `../database/demo/demo_data.sql`.
+
+> En producción las credenciales y el bootstrap se controlan con `DB_*`,
+> `ADMIN_*` y `TEACHER_*` desde `.env.prod`. Ver `../docs/DEPLOY.md`.
 
 ---
 
 ## API
 
-Base URL: `http://localhost:8080`
+- Desarrollo: `http://localhost:8080`
+- Producción: `https://api.gestion.cucii.mx`
 
 > [!IMPORTANT]
-> Todas las rutas requieren rol `ADMIN` y header `Authorization: Bearer <token>`, excepto `/auth/login` que es público.
+> `/auth/login` es público. El resto requiere `Authorization: Bearer <token>`.
+> El rol `docente` puede consultar catálogos/alumnos/grupos y registrar o
+> actualizar calificaciones. Los CRUDs administrativos y el borrado de
+> calificaciones requieren `ADMIN`.
 
 ### Autenticación
 
@@ -115,10 +124,20 @@ Base URL: `http://localhost:8080`
 POST /auth/login
 Content-Type: application/json
 
-{"email": "admin@cucii.edu.mx", "password": "Test1234!"}
+{"email": "admin@cucii.edu.mx", "password": "<ADMIN_PASSWORD>"}
 
 # Response: 200
-# { "token": "eyJ...", "nombre": "Admin", "email": "admin@cucii.edu.mx", "rol": "admin" }
+# { "token": "eyJ...", "id": 1, "nombre": "Administrador", "apellido": "Sistema",
+#   "email": "admin@cucii.edu.mx", "rolId": 1 }
+```
+
+```http
+GET /auth/me
+Authorization: Bearer <token>
+
+# Response: 200
+# { "id": 1, "nombre": "Administrador", "apellido": "Sistema",
+#   "email": "admin@cucii.edu.mx", "rolId": 1 }
 ```
 
 ### Catálogos
@@ -168,13 +187,23 @@ DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 ## Seguridad
 
 - **JWT:** Header `Authorization: Bearer <token>`
-- **Claims:** `sub` = email, `rol` = nombre del rol (minúsculas, sin prefijo)
-- **Spring Security:** `.hasRole("ADMIN")` — añade prefijo `ROLE_` automáticamente
+- **Claims:** `sub` = email, `rol` = `rolId` numérico (1=admin, 2=rector, 3=docente, 4=servicios_escolares, 5=coordinador)
 - **Roles en DB:** `admin`, `rector`, `docente`, `servicios_escolares`, `coordinador`
-- **Filtro:** `JwtAuthenticationFilter` se ejecuta en cada request (no excluye `/auth/**`)
+- **Filtro:** `JwtAuthenticationFilter` excluye `/auth/login`. Los tokens inválidos o expirados se capturan y la petición continúa sin autenticar.
+- **Errores de seguridad:** `401` para no autenticado y `403` para sin permisos, ambos con JSON `{"error": "..."}`.
 
-> [!WARNING]
-> El filtro JWT se ejecuta también en `/auth/login`. Si el header contiene un token expirado, el login fallará con 403. Enviar la petición sin header para login.
+### Acceso por rol (beta)
+
+| Rutas | Acceso |
+|-------|--------|
+| `/auth/login`, `/actuator/health`, Swagger | Público |
+| GET `/planes-estudio/**`, `/materias/**`, `/planteles/**`, `/alumnos/**`, `/grupos/**`, `/alumnos-grupos/**`, `/profesores-grupos/**` | `ADMIN`, `DOCENTE` |
+| GET/POST/PUT `/calificaciones/**` | `ADMIN`, `DOCENTE` |
+| DELETE `/calificaciones/**` | `ADMIN` |
+| `/usuarios/**` y escrituras de catálogos/CRUDs | `ADMIN` |
+
+> El docente todavía no está restringido a sus propios grupos/materias. Esa
+> matriz fina corresponde al hito **HG** de `docs/HITOS_PENDIENTES.md`.
 
 ---
 
@@ -182,7 +211,9 @@ DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 
 | Campo | Validación |
 |-------|------------|
-| `alumnos.curp` | Formato oficial CURP (regex en service + constraint en PostgreSQL) |
+| `alumnos.curp` | Obligatorio, formato oficial CURP (regex en service + constraint en PostgreSQL) |
+| `alumnos.correo_institucional` | Obligatorio, único y con formato de correo en el frontend |
+| `alumnos.estatus_id` | Obligatorio y debe existir en `estatus_alumnos` |
 | `grupos.clave` | Auto-generada como `CG-{n}` vía secuencia si no se provee |
 | `calificaciones.calificacion` | Rango 0-100 (BigDecimal) |
 | `calificaciones.alumno + grupo` | El alumno debe estar asignado (activo) al grupo; validado en service + FK compuesta en PostgreSQL |
@@ -203,3 +234,19 @@ DEL  /usuarios/{id}?deactivate=false             # Hard-delete
 ./mvnw package -DskipTests       # Generar JAR en target/
 ./mvnw clean                     # Limpiar build
 ```
+
+---
+
+## Despliegue
+
+El API se empaqueta con `server/Dockerfile` y se orquesta junto con PostgreSQL y
+Caddy mediante `docker-compose.prod.yaml`.
+
+```bash
+cp deploy/.env.prod.example .env.prod
+# completar secretos
+docker compose --env-file .env.prod -f docker-compose.prod.yaml up -d --build
+```
+
+Guía completa: [`../docs/DEPLOY.md`](../docs/DEPLOY.md).
+Hitos pendientes: [`../docs/HITOS_PENDIENTES.md`](../docs/HITOS_PENDIENTES.md).
